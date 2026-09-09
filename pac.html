@@ -1,87 +1,12 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#177bc5">
-<meta name="description" content="PAC tracking workspace for anaesthesia residents.">
-<link rel="manifest" href="/manifest.webmanifest">
-<link rel="icon" href="/icon.svg" type="image/svg+xml">
-<title>JLN Anaesthesia Resident — PAC</title>
-<style>
-:root{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#172033;background:#f4f7fb}*{box-sizing:border-box}body{margin:0}.app{max-width:1050px;margin:auto;padding:16px}.top{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:14px}.brand{font-size:24px;font-weight:800}.muted{color:#667085;font-size:12px}button{border:0;border-radius:9px;padding:10px 13px;font-weight:700;cursor:pointer}.primary{background:#177bc5;color:#fff}.secondary{background:#fff;color:#177bc5;border:1px solid #b9d8ee}.danger{background:#fff1f2;color:#b42318}.tabs{display:flex;gap:6px;margin-bottom:14px}.tabs button{background:#fff;border:1px solid #dfe4ea}.tabs .active{background:#edf7ff;color:#177bc5}.card{background:#fff;border:1px solid #dfe4ea;border-radius:14px;padding:15px;margin-bottom:12px}.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}label{display:block;font-size:11px;font-weight:800;color:#475467;margin-bottom:4px}input,select,textarea{width:100%;padding:9px;border:1px solid #ccd3dc;border-radius:9px;font:inherit}textarea{min-height:82px;resize:vertical}h2{font-size:19px;margin:0 0 12px}.row{display:flex;justify-content:space-between;gap:10px;align-items:center}.case{cursor:pointer}.badge{font-size:11px;font-weight:800;padding:5px 8px;border-radius:99px;background:#f2f4f7}.pending{background:#fff7d6;color:#8a5a00}.cleared{background:#ecfdf3;color:#166534}.hold{background:#fff1f2;color:#b42318}.advice{border-left:4px solid #177bc5;background:#f5faff;padding:11px;border-radius:8px}.actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:12px}.hidden{display:none!important}@media(max-width:650px){.grid,.grid3{grid-template-columns:1fr}.top{align-items:flex-start;flex-direction:column}}
-</style>
+<meta http-equiv="refresh" content="0;url=/index.html#pac">
+<title>Redirecting to JLN Anaesthesia Resident</title>
+<script>location.replace('/index.html#pac');</script>
 </head>
 <body>
-<main class="app">
-<header class="top"><div><div class="brand">JLN Anaesthesia Resident</div><div class="muted">Pre-Anaesthesia Check-up (PAC)</div></div><button class="secondary" onclick="location.href='ot-cases.html'">Open Intra-op</button></header>
-<div class="tabs"><button id="listTab" class="active" onclick="tab('list')">PAC Cases</button><button id="formTab" onclick="newPAC()">＋ New PAC</button></div>
-<section id="listView"><div class="card"><div class="row"><h2>Active PAC</h2><button class="primary" onclick="newPAC()">＋ New PAC</button></div><div id="list"></div></div></section>
-<section id="formView" class="hidden"><form id="form">
-<div class="card"><h2>Patient & procedure</h2><div class="grid3"><div><label>Patient name *</label><input name="name" required></div><div><label>Age</label><input name="age" type="number" min="0"></div><div><label>Sex</label><select name="sex"><option value="">Select</option><option>Male</option><option>Female</option><option>Other</option></select></div></div><div class="grid" style="margin-top:10px"><div><label>Diagnosis *</label><input name="diagnosis" required></div><div><label>Planned procedure *</label><input name="procedure" required></div></div></div>
-<div class="card"><h2>Important anaesthesia findings</h2><div class="grid"><div><label>Comorbidities</label><textarea name="comorbidities" placeholder="HTN, DM, IHD, CKD..."></textarea></div><div><label>Current medications</label><textarea name="medications" placeholder="Anticoagulants, antiplatelets, regular drugs..."></textarea></div><div><label>Airway / anaesthesia findings</label><textarea name="airway" placeholder="Airway, cervical spine, dentition, previous difficult airway..."></textarea></div><div><label>Important investigations</label><textarea name="investigations" placeholder="Hb, platelets, renal function, ECG, echo, coagulation..."></textarea></div></div></div>
-<div class="card"><h2>PAC assessment</h2><div class="grid3"><div><label>ASA</label><select name="asa"><option>ASA I</option><option>ASA II</option><option>ASA III</option><option>ASA IV</option><option>ASA V</option></select></div><div><label>Status</label><select name="status"><option>Pending</option><option>Cleared</option><option>Hold</option></select></div><div><label>Resident</label><input name="resident"></div></div><div style="margin-top:10px"><label>Resident assessment / plan</label><textarea name="plan" placeholder="Optimization, investigations, fasting/medication instructions, anaesthetic concerns..."></textarea></div></div>
-<div class="card"><h2>Consultant advice</h2><div class="advice"><label>Advice / decision</label><textarea name="advice" placeholder="Consultant advice, optimization requirements or clearance comments..."></textarea><div class="grid" style="margin-top:10px"><div><label>Consultant</label><input name="consultant"></div><div><label>Date / time</label><input name="adviceTime" type="datetime-local"></div></div></div></div>
-<div class="actions"><button class="primary">Save PAC</button><button type="button" class="secondary" onclick="tab('list')">Cancel</button><button id="delete" type="button" class="danger hidden" onclick="del()">Delete</button></div>
-</form></section>
-</main>
-<script src="/supabase-config.js"></script>
-<script>
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/sw.js').catch((err) => console.warn('SW registration failed', err));
-}
-const KEY='jln_pac_cases_v1',BRIDGE='jln_selected_pac_v1';let cases=[],editing=null;
-const $=s=>document.querySelector(s),esc=v=>{const d=document.createElement('div');d.textContent=v??'';return d.innerHTML},f=document.querySelector('#form');
-
-async function loadCases(){
-  if (window.supabaseClient) {
-    try {
-      const { data, error } = await window.supabaseClient.from('pac_cases').select('*').order('updated_at', { ascending: false });
-      if (!error && Array.isArray(data)) {
-        cases=data;
-        localStorage.setItem(KEY, JSON.stringify(cases));
-        render();
-        return;
-      }
-    } catch (_) {}
-  }
-
-  try {
-    cases=JSON.parse(localStorage.getItem(KEY)||'[]');
-    if (!Array.isArray(cases)) cases=[];
-  } catch (_) {
-    cases=[];
-  }
-}
-
-async function save(){
-  localStorage.setItem(KEY, JSON.stringify(cases));
-
-  if (window.supabaseClient) {
-    try {
-      const rows = cases.map(item => ({
-        ...item,
-        updated_at: item.updated_at || new Date().toISOString()
-      }));
-
-      const { error } = await window.supabaseClient.from('pac_cases').upsert(rows, { onConflict: 'id' });
-      if (!error) {
-        render();
-        return;
-      }
-    } catch (_) {}
-  }
-
-  render();
-}
-
-function tab(x){$('#listView').classList.toggle('hidden',x!=='list');$('#formView').classList.toggle('hidden',x!=='form');$('#listTab').classList.toggle('active',x==='list');$('#formTab').classList.toggle('active',x==='form');if(x==='list')render()}
-function newPAC(){editing=null;f.reset();$('#delete').classList.add('hidden');f.adviceTime.value=new Date(Date.now()-new Date().getTimezoneOffset()*60000).toISOString().slice(0,16);tab('form')}
-function edit(id){const c=cases.find(x=>x.id===id);if(!c)return;editing=id;Object.keys(c).forEach(k=>{if(f.elements[k])f.elements[k].value=c[k]||''});$('#delete').classList.remove('hidden');tab('form')}
-async function del(){if(editing&&confirm('Delete this PAC record?')){cases=cases.filter(c=>c.id!==editing);await save();tab('list')}}
-f.onsubmit=async e=>{e.preventDefault();const o={id:editing||crypto.randomUUID(),updated_at:new Date().toISOString()};for(const el of f.elements)if(el.name)o[el.name]=el.value.trim();const i=cases.findIndex(c=>c.id===o.id);if(i<0)cases.unshift(o);else cases[i]=o;await save();tab('list')};
-function sendOT(id){const c=cases.find(x=>x.id===id);localStorage.setItem(BRIDGE,JSON.stringify({...c,sentAt:new Date().toISOString()}));alert('PAC patient selected for OT. Next we can connect this directly to the existing OT form.')}
-function render(){const el=$('#list');if(!cases.length){el.innerHTML='<div class="muted">No PAC cases yet. Create the first PAC.</div>';return}el.innerHTML=cases.map(c=>`<div class="card case" onclick="edit('${c.id}')"><div class="row"><div><b>${esc(c.name)}</b><div class="muted">${esc(c.age)} ${esc(c.sex)} · ${esc(c.diagnosis)}</div></div><span class="badge ${c.status==='Cleared'?'cleared':c.status==='Hold'?'hold':'pending'}">${esc(c.status||'Pending')}</span></div><div class="muted" style="margin-top:6px">Procedure: ${esc(c.procedure)}</div><div class="actions"><button class="secondary" onclick="event.stopPropagation();edit('${c.id}')">Edit</button><button class="primary" onclick="event.stopPropagation();sendOT('${c.id}')">Send to OT</button></div></div>`).join('')}
-loadCases().then(render);
-</script>
-</body></html>
+<p>Opening Pre-Anaesthesia Check-up... <a href="/index.html#pac">Click here if not redirected</a>.</p>
+</body>
+</html>

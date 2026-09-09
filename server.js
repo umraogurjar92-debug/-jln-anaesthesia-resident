@@ -54,11 +54,25 @@ function isSafePath(filePath) {
 }
 
 async function serveStaticFile(res, filePath) {
-  const safePath = path.normalize(filePath);
+  let safePath = path.normalize(filePath);
   if (!isSafePath(safePath)) {
     res.writeHead(403, { 'Content-Type': 'text/plain' });
     res.end('Forbidden');
     return;
+  }
+
+  // If path has no extension and doesn't exist, try .html or fallback to index.html for SPA
+  if (!path.extname(safePath)) {
+    try {
+      await fsPromises.access(safePath);
+    } catch {
+      try {
+        await fsPromises.access(safePath + '.html');
+        safePath = safePath + '.html';
+      } catch {
+        safePath = path.join(ROOT, 'index.html');
+      }
+    }
   }
 
   try {

@@ -1,53 +1,585 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#177bc5">
-<meta name="description" content="Anaesthesia resident clinical workspace for PAC and OT case tracking.">
-<link rel="manifest" href="/manifest.webmanifest">
-<link rel="icon" href="/icon.svg" type="image/svg+xml">
-<title>JLN Anaesthesia Resident</title>
-<style>
-:root{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f4f7fb;color:#172033;--blue:#177bc5;--line:#dfe4ea;--muted:#667085;--card:#fff;--shadow:0 12px 30px rgba(15,23,42,.08)}
-*{box-sizing:border-box}body{margin:0;background:linear-gradient(180deg,#edf6ff 0%,#f4f7fb 28%,#eef2f6 100%)}main{max-width:760px;margin:55px auto;padding:20px}.card{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:24px;box-shadow:var(--shadow)}h1{margin:0 0 6px;font-size:clamp(1.8rem,4vw,2.3rem)}.muted{color:var(--muted);margin-bottom:22px}.links{display:grid;gap:12px}.link-btn{text-decoration:none;padding:15px;border-radius:12px;background:#177bc5;color:#fff;font-weight:800;display:block;box-shadow:0 8px 18px rgba(23,123,197,.22)}.link-btn.secondary{background:#edf7ff;color:#177bc5}.app-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}.install-btn{display:none;border:1px solid #bad3ef;background:#fff;color:#0f5ea8;padding:12px 16px;border-radius:12px;font-weight:800;cursor:pointer}.
-@media (max-width:540px){main{padding:16px} .card{padding:20px}}
-</style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#1570b8">
+  <meta name="description" content="JLN Anaesthesia Resident - Clinical workspace for Pre-Anaesthetic Check-up (PAC) and Operating Theatre intra-op case tracking.">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" href="/icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/styles.css">
+  <title>JLN Anaesthesia Resident</title>
 </head>
 <body>
-<main>
-  <div class="card">
-    <h1>JLN Anaesthesia Resident</h1>
-    <div class="muted">Anaesthesia resident clinical workspace</div>
-    <div class="links">
-      <a class="link-btn" href="pac.html">Pre-Anaesthesia Check-up (PAC)</a>
-      <a class="link-btn secondary" href="ot-cases.html">OT Cases / Intra-op Monitoring</a>
+
+  <!-- Top Application Bar -->
+  <header class="app-header">
+    <div class="header-inner">
+      <div class="brand-group">
+        <div class="brand-icon">
+          <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+            <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+          </svg>
+        </div>
+        <div>
+          <div class="brand-title">JLN Anaesthesia Resident</div>
+          <div class="brand-subtitle">Clinical Workspace · PAC & Intra-op</div>
+        </div>
+      </div>
+
+      <!-- Desktop Nav Tabs -->
+      <nav class="desktop-nav">
+        <button class="nav-tab-btn active" data-tab="pac" type="button">
+          📋 PAC
+        </button>
+        <button class="nav-tab-btn" data-tab="ot" type="button">
+          🏥 OT Cases
+        </button>
+        <button class="nav-tab-btn" data-tab="dashboard" type="button">
+          📊 Consultant View
+        </button>
+        <button class="nav-tab-btn" data-tab="settings" type="button">
+          ⚙️ Settings
+        </button>
+      </nav>
+
+      <!-- Top Right Controls -->
+      <div class="header-controls">
+        <div id="syncPill" class="sync-pill offline">
+          <span class="sync-dot"></span>
+          <span id="syncLabel">Offline</span>
+        </div>
+        <button id="themeToggleBtn" class="btn-icon" type="button" title="Toggle Light / Dark OT Mode">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+          </svg>
+        </button>
+      </div>
     </div>
-    <div class="app-actions">
-      <button id="installBtn" class="install-btn" type="button">Install app</button>
+  </header>
+
+  <!-- Main Container -->
+  <main class="app-container">
+
+    <!-- Global Search & Date Toolbar -->
+    <div class="toolbar">
+      <div class="toolbar-left">
+        <div class="search-wrapper">
+          <svg class="search-icon" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+          </svg>
+          <input id="globalSearchInput" class="search-input" type="search" placeholder="Search patient, CR#, procedure, resident...">
+        </div>
+      </div>
+      <div class="toolbar-right">
+        <div class="date-badge">
+          📅 <input id="globalDateInput" class="date-input" type="date">
+        </div>
+      </div>
+    </div>
+
+    <!-- View 1: Pre-Anaesthesia Checkup (PAC) -->
+    <section id="pacView" class="tab-view">
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-header" style="border-bottom:none;padding-bottom:0">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            <button class="btn btn-secondary btn-sm active" data-pac-filter="ALL" type="button">All Status</button>
+            <button class="btn btn-secondary btn-sm" data-pac-filter="Cleared" type="button">Cleared</button>
+            <button class="btn btn-secondary btn-sm" data-pac-filter="Pending" type="button">Pending</button>
+            <button class="btn btn-secondary btn-sm" data-pac-filter="Hold" type="button">On Hold</button>
+          </div>
+          <button class="btn btn-primary" type="button" onclick="window.JLN_APP.newPac()">
+            ＋ New PAC
+          </button>
+        </div>
+      </div>
+      <div id="pacCasesList"></div>
+    </section>
+
+    <!-- View 2: OT Intra-op Workspace -->
+    <section id="otView" class="tab-view" style="display:none">
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-header" style="border-bottom:none;padding-bottom:0">
+          <div style="min-width:200px">
+            <select id="otRoomFilterSelect" class="form-control" style="font-weight:700">
+              <option value="ALL">All Operating Theatres</option>
+            </select>
+          </div>
+          <button class="btn btn-primary" type="button" onclick="window.JLN_APP.startNewCase()">
+            ＋ Start New Case
+          </button>
+        </div>
+      </div>
+      <div id="otCasesContainer"></div>
+    </section>
+
+    <!-- View 3: Consultant Department Dashboard -->
+    <section id="dashboardView" class="tab-view" style="display:none">
+      <div id="dashboardStatsMatrix" class="stats-matrix"></div>
+      <div id="dashboardRoomBoard"></div>
+    </section>
+
+    <!-- View 4: Settings & Sync -->
+    <section id="settingsView" class="tab-view" style="display:none">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">☁️ Cloud Synchronization (Supabase)</div>
+        </div>
+        <p style="font-size:13px;color:var(--text-muted);margin-bottom:14px">
+          The app stores all PAC and OT cases in browser storage for 100% offline capability. When connected, changes automatically sync with the department's Supabase cloud database.
+        </p>
+        <button id="forceSyncBtn" class="btn btn-primary" type="button">
+          🔄 Sync With Cloud Now
+        </button>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">💾 Data Backup & Logbook Export</div>
+        </div>
+        <p style="font-size:13px;color:var(--text-muted);margin-bottom:14px">
+          Export clinical records for departmental audits, research, or personal academic logbooks.
+        </p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button id="exportCsvBtn" class="btn btn-secondary" type="button">
+            📥 Export OT Cases (CSV)
+          </button>
+          <button id="exportJsonBtn" class="btn btn-secondary" type="button">
+            📥 Export Complete Backup (JSON)
+          </button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">📱 PWA App Installation</div>
+        </div>
+        <p style="font-size:13px;color:var(--text-muted);margin-bottom:14px">
+          Install this app directly onto your home screen for quick offline access inside shielded operating rooms.
+        </p>
+        <button id="installAppBtn" class="btn btn-secondary" type="button" style="display:none">
+          📲 Install to Home Screen
+        </button>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Mobile Bottom Navigation Bar -->
+  <nav class="bottom-nav">
+    <div class="bottom-nav-inner">
+      <button class="bottom-nav-item active" data-tab="pac" type="button">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2m-6 9 2 2 4-4"/>
+        </svg>
+        <span>PAC</span>
+      </button>
+      <button class="bottom-nav-item" data-tab="ot" type="button">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
+        </svg>
+        <span>OT Cases</span>
+      </button>
+      <button class="bottom-nav-item" data-tab="dashboard" type="button">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>
+        </svg>
+        <span>Dashboard</span>
+      </button>
+      <button class="bottom-nav-item" data-tab="settings" type="button">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+        </svg>
+        <span>Settings</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- Modal 1: PAC Evaluation Dialog -->
+  <div id="pacModal" class="modal-backdrop">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <div id="pacModalTitle" class="modal-title">Pre-Anaesthesia Check-up</div>
+        <button class="btn-icon" data-close-modal="pacModal" type="button">✕</button>
+      </div>
+      <form id="pacForm">
+        <div class="modal-body">
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label">Patient Name *</label>
+              <input name="name" class="form-control" required placeholder="e.g. Ramesh Kumar">
+            </div>
+            <div class="form-group">
+              <label class="form-label">CR / UHID No.</label>
+              <input name="crNo" class="form-control" placeholder="e.g. 2026/8941">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Age & Sex</label>
+              <div style="display:flex;gap:6px">
+                <input name="age" class="form-control" type="number" min="0" placeholder="Age">
+                <select name="sex" class="form-control">
+                  <option value="">Sex</option>
+                  <option>Male</option>
+                  <option>Female</option>
+                  <option>Other</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Ward / Bed</label>
+              <input name="ward" class="form-control" placeholder="e.g. Surgery Ward Bed 14">
+            </div>
+            <div class="form-group col-span-full">
+              <label class="form-label">Diagnosis *</label>
+              <input name="diagnosis" class="form-control" required placeholder="e.g. Cholelithiasis with Chronic Cholecystitis">
+            </div>
+            <div class="form-group col-span-full">
+              <label class="form-label">Planned Procedure *</label>
+              <input name="procedure" class="form-control" required placeholder="e.g. Laparoscopic Cholecystectomy">
+            </div>
+            <div class="form-group col-span-full">
+              <label class="form-label">Comorbidities & Systemic History</label>
+              <textarea name="comorbidities" class="form-control" placeholder="HTN, DM, IHD, Asthma, Thyroid, Seizure, Bleeding tendency..."></textarea>
+            </div>
+            <div class="form-group col-span-full">
+              <label class="form-label">Current Medications</label>
+              <textarea name="medications" class="form-control" placeholder="Antihypertensives, Antiplatelets (stopped?), Oral hypoglycaemics, Steroids..."></textarea>
+            </div>
+            <div class="form-group col-span-full">
+              <label class="form-label">Airway Examination & Spine</label>
+              <textarea name="airway" class="form-control" placeholder="Mallampati class, Mouth opening, TMD, Neck mobility, Dentition, Previous difficult airway..."></textarea>
+            </div>
+            <div class="form-group col-span-full">
+              <label class="form-label">Important Investigations</label>
+              <textarea name="investigations" class="form-control" placeholder="Hb, TLC, Platelets, PT/INR, RFT, Electrolytes, RBS, ECG, 2D Echo, CXR..."></textarea>
+            </div>
+            <div class="form-group">
+              <label class="form-label">ASA Classification</label>
+              <select name="asa" class="form-control">
+                <option>ASA I</option>
+                <option>ASA II</option>
+                <option>ASA III</option>
+                <option>ASA IV</option>
+                <option>ASA V</option>
+                <option>ASA I (E)</option>
+                <option>ASA II (E)</option>
+                <option>ASA III (E)</option>
+                <option>ASA IV (E)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Clearance Status</label>
+              <select name="status" class="form-control">
+                <option>Pending</option>
+                <option>Cleared</option>
+                <option>Hold</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Resident Doctor</label>
+              <input name="resident" class="form-control" placeholder="Dr. Resident">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Special Flags</label>
+              <div style="display:flex;flex-direction:column;gap:6px;margin-top:4px">
+                <label style="font-size:12px;font-weight:600;display:flex;align-items:center;gap:6px">
+                  <input type="checkbox" name="difficultAirway"> Anticipated Difficult Airway
+                </label>
+                <label style="font-size:12px;font-weight:600;display:flex;align-items:center;gap:6px">
+                  <input type="checkbox" name="highRiskConsent"> High-Risk Consent Required
+                </label>
+              </div>
+            </div>
+            <div class="form-group col-span-full">
+              <label class="form-label">Resident Assessment & Anaesthesia Plan</label>
+              <textarea name="plan" class="form-control" placeholder="Choice of anaesthesia (GA / Spinal / Block), NPO instructions, ICU bed required..."></textarea>
+            </div>
+            <div class="form-group col-span-full" style="border:1px solid var(--border);padding:12px;border-radius:var(--radius-sm);background:var(--surface)">
+              <label class="form-label" style="color:var(--primary)">Consultant Review & Advice</label>
+              <textarea name="advice" class="form-control" style="margin:6px 0" placeholder="Clearance instructions, optimization requirements, cardiologist opinion needed..."></textarea>
+              <div class="form-grid" style="margin-top:6px">
+                <div class="form-group">
+                  <label class="form-label">Consultant Name</label>
+                  <input name="consultant" class="form-control" placeholder="Dr. Consultant">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Date & Time</label>
+                  <input name="adviceTime" type="datetime-local" class="form-control">
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button id="deletePacBtn" class="btn btn-danger" type="button" style="margin-right:auto;display:none">
+            Delete Record
+          </button>
+          <button class="btn btn-secondary" data-close-modal="pacModal" type="button">Cancel</button>
+          <button class="btn btn-primary" type="submit">Save Assessment</button>
+        </div>
+      </form>
     </div>
   </div>
-</main>
-<script>
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/sw.js').catch((err) => console.warn('SW registration failed', err));
-}
-let deferredPrompt;
-const installButton = document.getElementById('installBtn');
-window.addEventListener('beforeinstallprompt', (event) => {
-  event.preventDefault();
-  deferredPrompt = event;
-  if (installButton) installButton.style.display = 'inline-block';
-});
-if (installButton) {
-  installButton.addEventListener('click', async () => {
-    if (!deferredPrompt) return;
-    deferredPrompt.prompt();
-    await deferredPrompt.userChoice;
-    deferredPrompt = null;
-    installButton.style.display = 'none';
-  });
-}
-</script>
+
+  <!-- Modal 2: Start New OT Case Dialog -->
+  <div id="startCaseModal" class="modal-backdrop">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <div class="modal-title">Start New OT Case</div>
+        <button class="btn-icon" data-close-modal="startCaseModal" type="button">✕</button>
+      </div>
+      <form id="startCaseForm">
+        <div class="modal-body">
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label">Operating Theatre (OT) *</label>
+              <select name="ot" class="form-control" required></select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Resident Doctor *</label>
+              <input name="resident" class="form-control" required placeholder="Dr. Resident">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Patient Name / Ref *</label>
+              <input name="patient" class="form-control" required placeholder="Patient Name / CR#">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Age & Sex</label>
+              <input name="age" class="form-control" placeholder="e.g. 45 M">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Weight (kg)</label>
+              <input name="weight" class="form-control" placeholder="e.g. 70 kg">
+            </div>
+            <div class="form-group">
+              <label class="form-label">ASA Grade</label>
+              <select name="asa" class="form-control">
+                <option>ASA I</option>
+                <option>ASA II</option>
+                <option>ASA III</option>
+                <option>ASA IV</option>
+                <option>ASA V</option>
+                <option>ASA I (E)</option>
+                <option>ASA II (E)</option>
+                <option>ASA III (E)</option>
+              </select>
+            </div>
+            <div class="form-group col-span-full">
+              <label class="form-label">Procedure *</label>
+              <input name="procedure" class="form-control" required placeholder="e.g. Laparoscopic Appendicectomy">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Anaesthesia Technique</label>
+              <select name="anaesthesia" class="form-control">
+                <option>General Anaesthesia</option>
+                <option>Spinal Anaesthesia</option>
+                <option>Epidural Anaesthesia</option>
+                <option>GA + Regional Block</option>
+                <option>MAC / Sedation</option>
+                <option>Peripheral Nerve Block</option>
+                <option>Other</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Airway Device</label>
+              <select name="airway" class="form-control">
+                <option>ETT (Endotracheal Tube)</option>
+                <option>LMA (Supraglottic)</option>
+                <option>Face Mask</option>
+                <option>Regional / No Airway Device</option>
+                <option>Tracheostomy</option>
+                <option>Other</option>
+              </select>
+            </div>
+            <div class="form-group col-span-full">
+              <label class="form-label">Active Monitoring In Use</label>
+              <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(130px, 1fr));gap:6px;background:var(--surface);padding:10px;border-radius:var(--radius-sm)">
+                <label style="font-size:12px;display:flex;align-items:center;gap:6px"><input type="checkbox" name="monitor" value="ECG" checked> ECG</label>
+                <label style="font-size:12px;display:flex;align-items:center;gap:6px"><input type="checkbox" name="monitor" value="NIBP" checked> NIBP</label>
+                <label style="font-size:12px;display:flex;align-items:center;gap:6px"><input type="checkbox" name="monitor" value="SpO₂" checked> SpO₂</label>
+                <label style="font-size:12px;display:flex;align-items:center;gap:6px"><input type="checkbox" name="monitor" value="EtCO₂" checked> EtCO₂</label>
+                <label style="font-size:12px;display:flex;align-items:center;gap:6px"><input type="checkbox" name="monitor" value="Temp"> Temperature</label>
+                <label style="font-size:12px;display:flex;align-items:center;gap:6px"><input type="checkbox" name="monitor" value="Arterial Line"> Arterial Line</label>
+                <label style="font-size:12px;display:flex;align-items:center;gap:6px"><input type="checkbox" name="monitor" value="CVP"> CVP</label>
+                <label style="font-size:12px;display:flex;align-items:center;gap:6px"><input type="checkbox" name="monitor" value="BIS / Depth"> BIS / Depth</label>
+                <label style="font-size:12px;display:flex;align-items:center;gap:6px"><input type="checkbox" name="monitor" value="Urine Output"> Urine Output</label>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" data-close-modal="startCaseModal" type="button">Cancel</button>
+          <button class="btn btn-primary" type="submit">Start Case</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal 3: Update Intra-op Vitals & Status -->
+  <div id="updateVitalsModal" class="modal-backdrop">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <div>
+          <div class="modal-title">Update Intra-op Status</div>
+          <div id="vitalsModalPatient" style="font-size:12px;color:var(--text-muted)"></div>
+        </div>
+        <button class="btn-icon" data-close-modal="updateVitalsModal" type="button">✕</button>
+      </div>
+      <form id="updateVitalsForm">
+        <input type="hidden" name="caseId">
+        <div class="modal-body">
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label">BP (mmHg)</label>
+              <input name="bp" class="form-control" placeholder="e.g. 120/80">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Heart Rate (bpm)</label>
+              <input name="hr" type="number" class="form-control" placeholder="e.g. 78">
+            </div>
+            <div class="form-group">
+              <label class="form-label">SpO₂ (%)</label>
+              <input name="spo2" type="number" class="form-control" placeholder="e.g. 99">
+            </div>
+            <div class="form-group">
+              <label class="form-label">EtCO₂ (mmHg)</label>
+              <input name="etco2" type="number" class="form-control" placeholder="e.g. 35">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Temperature (°C)</label>
+              <input name="temp" type="number" step="0.1" class="form-control" placeholder="e.g. 36.6">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Urine Output (mL)</label>
+              <input name="urine" type="number" class="form-control" placeholder="e.g. 150">
+            </div>
+            <div class="form-group col-span-full">
+              <label class="form-label">Fluids & Blood Products Given</label>
+              <input name="fluid" class="form-control" placeholder="e.g. RL 1000 mL + NS 500 mL">
+            </div>
+            <div class="form-group col-span-full">
+              <label class="form-label">Active Infusion / Inotrope</label>
+              <input name="infusion" class="form-control" placeholder="e.g. Noradrenaline 0.05 mcg/kg/min">
+            </div>
+            <div class="form-group col-span-full" style="border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px;background:var(--surface)">
+              <div style="font-size:12px;font-weight:700;margin-bottom:8px">Ventilator Settings</div>
+              <div class="form-grid">
+                <div class="form-group">
+                  <label class="form-label">Mode</label>
+                  <select name="ventmode" class="form-control">
+                    <option value="">Spontaneous / No Vent</option>
+                    <option>VCV (Volume Control)</option>
+                    <option>PCV (Pressure Control)</option>
+                    <option>SIMV-VC</option>
+                    <option>SIMV-PC</option>
+                    <option>PSV</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Tidal Volume (mL)</label>
+                  <input name="tv" type="number" class="form-control" placeholder="e.g. 450">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Rate (/min)</label>
+                  <input name="rr" type="number" class="form-control" placeholder="e.g. 14">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">PEEP (cmH₂O)</label>
+                  <input name="peep" type="number" class="form-control" placeholder="e.g. 5">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">FiO₂ (%)</label>
+                  <input name="fio2" type="number" class="form-control" placeholder="e.g. 40">
+                </div>
+              </div>
+            </div>
+            <div class="form-group col-span-full">
+              <label class="form-label">Intra-op Note</label>
+              <textarea name="note" class="form-control" placeholder="Observations, hemodynamic stability, blood loss..."></textarea>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" data-close-modal="updateVitalsModal" type="button">Cancel</button>
+          <button class="btn btn-primary" type="submit">Save Status</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal 4: Add Event / Complication Dialog -->
+  <div id="addEventModal" class="modal-backdrop">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <div>
+          <div class="modal-title">Log Intra-op Event</div>
+          <div id="eventModalPatient" style="font-size:12px;color:var(--text-muted)"></div>
+        </div>
+        <button class="btn-icon" data-close-modal="addEventModal" type="button">✕</button>
+      </div>
+      <form id="addEventForm">
+        <input type="hidden" name="caseId">
+        <div class="modal-body">
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label">Event Category *</label>
+              <select name="type" class="form-control" required>
+                <option>Drug given</option>
+                <option>Airway event</option>
+                <option>Vital sign problem</option>
+                <option>Problem / complication</option>
+                <option>Fluid / blood product</option>
+                <option>Regional / block</option>
+                <option>Procedure milestone</option>
+                <option>Other</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Time *</label>
+              <input name="time" class="form-control" placeholder="HH:MM" required>
+            </div>
+            <div class="form-group col-span-full">
+              <label class="form-label">Details / Clinical Intervention *</label>
+              <textarea name="detail" class="form-control" required placeholder="e.g. Propofol 100 mg + Fentanyl 100 mcg IV given, or Hypotension BP 80/50 treated with Mephentermine 6 mg IV"></textarea>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" data-close-modal="addEventModal" type="button">Cancel</button>
+          <button class="btn btn-primary" type="submit">Log Event</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="/supabase-config.js"></script>
+  <script src="/app.js"></script>
+  <script>
+    // Register Service Worker for offline capability
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js').catch((err) => console.warn('SW register notice:', err));
+      });
+    }
+
+    // PWA Install Prompt
+    let deferredPrompt;
+    const installBtn = document.getElementById('installAppBtn');
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      if (installBtn) installBtn.style.display = 'inline-flex';
+    });
+    if (installBtn) {
+      installBtn.addEventListener('click', async () => {
+        if (!deferredPrompt) return;
+        deferredPrompt.prompt();
+        await deferredPrompt.userChoice;
+        deferredPrompt = null;
+        installBtn.style.display = 'none';
+      });
+    }
+  </script>
 </body>
 </html>

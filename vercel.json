@@ -1,9 +1,10 @@
 {
   "cleanUrls": true,
   "trailingSlash": false,
-  "routes": [
-    { "src": "/", "dest": "/index.html" },
-    { "src": "/ot-cases", "dest": "/ot-cases.html" },
-    { "src": "/pac", "dest": "/pac.html" }
+  "rewrites": [
+    { "source": "/pac", "destination": "/index.html" },
+    { "source": "/ot-cases", "destination": "/index.html" },
+    { "source": "/ot", "destination": "/index.html" },
+    { "source": "/dashboard", "destination": "/index.html" }
   ]
 }
