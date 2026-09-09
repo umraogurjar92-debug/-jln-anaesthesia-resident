@@ -381,9 +381,9 @@
       weight: p.weight || '',
       asa: p.asa || 'ASA I',
       procedure: p.procedure || '',
-      airway: (p.airway && p.airway.toLowerCase().includes('lma')) ? 'LMA' : 'ETT',
+      airway: (p.airway && p.airway.toLowerCase().includes('lma')) ? 'LMA (Supraglottic)' : 'ETT (Endotracheal Tube)',
       resident: p.resident || ''
-    });
+    }, pacId);
   }
 
   function renderPacView() {
@@ -462,7 +462,7 @@
             </div>
             <div style="display:flex;gap:6px" onclick="event.stopPropagation()">
               <button class="btn btn-secondary btn-sm" onclick="window.JLN_APP.editPac('${escapeHtml(c.id)}')">Edit</button>
-              <button class="btn btn-primary btn-sm" onclick="window.JLN_APP.sendToOt('${escapeHtml(c.id)}')">Send to OT →</button>
+              <button class="btn btn-primary btn-sm" onclick="window.JLN_APP.sendToOt('${escapeHtml(c.id)}')">🚀 Move to OT Table →</button>
             </div>
           </div>
         </div>
@@ -500,7 +500,7 @@
     return { badge: 'badge-ongoing', label: 'Ongoing', key: 'ongoing' };
   }
 
-  function openStartCaseModal(prefill = {}) {
+  function openStartCaseModal(prefill = {}, preselectedPacId = null) {
     const form = $('startCaseForm');
     form.reset();
 
@@ -508,6 +508,50 @@
     otSelect.innerHTML = '<option value="">Select OT</option>' + state.otList.map(
       (ot) => `<option value="${escapeHtml(ot)}">${escapeHtml(ot)}</option>`
     ).join('');
+
+    const badge = $('pacPatientLoadedBadge');
+    if (badge) badge.style.display = 'none';
+
+    // Populate Load From PAC dropdown
+    const pacSelect = $('loadFromPacSelect');
+    if (pacSelect) {
+      pacSelect.innerHTML = '<option value="">-- Select Patient from PAC List --</option>' +
+        state.pacCases.map((p) => `
+          <option value="${escapeHtml(p.id)}">
+            ${escapeHtml(p.name || 'Unnamed Patient')}${p.crNo ? ` (#${escapeHtml(p.crNo)})` : ''} · ${escapeHtml(p.procedure || 'No procedure')} [${escapeHtml(p.status || 'Pending')}]
+          </option>
+        `).join('');
+
+      pacSelect.onchange = () => {
+        const pid = pacSelect.value;
+        if (!pid) {
+          if (badge) badge.style.display = 'none';
+          return;
+        }
+        const p = state.pacCases.find((x) => x.id === pid);
+        if (!p) return;
+        form.elements.patient.value = p.name ? `${p.name}${p.crNo ? ` (CR: ${p.crNo})` : ''}` : '';
+        form.elements.age.value = `${p.age || ''} ${p.sex || ''}`.trim();
+        form.elements.weight.value = p.weight || '';
+        form.elements.asa.value = p.asa || 'ASA I';
+        form.elements.procedure.value = p.procedure || '';
+        form.elements.resident.value = p.resident || '';
+        form.elements.airway.value = (p.airway && p.airway.toLowerCase().includes('lma')) ? 'LMA (Supraglottic)' : 'ETT (Endotracheal Tube)';
+        if (badge) {
+          badge.style.display = 'block';
+          badge.textContent = `✓ Auto-filled from PAC: ${p.name || 'Patient'} (${p.status || 'Cleared'})`;
+        }
+      };
+
+      if (preselectedPacId) {
+        pacSelect.value = preselectedPacId;
+        if (badge) {
+          const p = state.pacCases.find((x) => x.id === preselectedPacId);
+          badge.style.display = 'block';
+          badge.textContent = `✓ Auto-filled from PAC: ${p?.name || 'Patient'} (${p?.status || 'Cleared'})`;
+        }
+      }
+    }
 
     Object.keys(prefill).forEach((k) => {
       if (form.elements[k]) form.elements[k].value = prefill[k] || '';

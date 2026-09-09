@@ -331,6 +331,17 @@
       <form id="startCaseForm">
         <div class="modal-body">
           <div class="form-grid">
+            <div class="form-group col-span-full" style="background:var(--primary-light);padding:10px 12px;border-radius:var(--radius-sm);border:1px solid var(--border);margin-bottom:4px">
+              <label class="form-label" style="color:var(--primary);font-weight:800;display:flex;align-items:center;gap:6px">
+                📋 Shift Patient from PAC (Auto-fill details)
+              </label>
+              <select id="loadFromPacSelect" class="form-control" style="font-weight:700">
+                <option value="">-- Select Patient from PAC List --</option>
+              </select>
+              <div id="pacPatientLoadedBadge" style="font-size:11px;color:var(--success);font-weight:700;margin-top:4px;display:none">
+                ✓ Patient details auto-filled from PAC
+              </div>
+            </div>
             <div class="form-group">
               <label class="form-label">Operating Theatre (OT) *</label>
               <select name="ot" class="form-control" required></select>
