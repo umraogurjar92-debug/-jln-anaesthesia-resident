@@ -25,6 +25,7 @@
 <div class="actions"><button class="primary">Save PAC</button><button type="button" class="secondary" onclick="tab('list')">Cancel</button><button id="delete" type="button" class="danger hidden" onclick="del()">Delete</button></div>
 </form></section>
 </main>
+<script src="/supabase-config.js"></script>
 <script>
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/sw.js').catch((err) => console.warn('SW registration failed', err));
@@ -33,16 +34,17 @@ const KEY='jln_pac_cases_v1',BRIDGE='jln_selected_pac_v1';let cases=[],editing=n
 const $=s=>document.querySelector(s),esc=v=>{const d=document.createElement('div');d.textContent=v??'';return d.innerHTML},f=document.querySelector('#form');
 
 async function loadCases(){
-  try {
-    const res=await fetch('/api/pac-cases');
-    if (!res.ok) throw new Error('API failed');
-    const data=await res.json();
-    if (Array.isArray(data)) {
-      cases=data;
-      localStorage.setItem(KEY, JSON.stringify(cases));
-      return;
-    }
-  } catch (_) {}
+  if (window.supabaseClient) {
+    try {
+      const { data, error } = await window.supabaseClient.from('pac_cases').select('*').order('updated_at', { ascending: false });
+      if (!error && Array.isArray(data)) {
+        cases=data;
+        localStorage.setItem(KEY, JSON.stringify(cases));
+        render();
+        return;
+      }
+    } catch (_) {}
+  }
 
   try {
     cases=JSON.parse(localStorage.getItem(KEY)||'[]');
@@ -54,16 +56,22 @@ async function loadCases(){
 
 async function save(){
   localStorage.setItem(KEY, JSON.stringify(cases));
-  try {
-    const res=await fetch('/api/pac-cases', {
-      method: 'PUT',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify(cases)
-    });
-    if (!res.ok) throw new Error('Persist failed');
-    const data=await res.json();
-    if (Array.isArray(data)) cases=data;
-  } catch (_) {}
+
+  if (window.supabaseClient) {
+    try {
+      const rows = cases.map(item => ({
+        ...item,
+        updated_at: item.updated_at || new Date().toISOString()
+      }));
+
+      const { error } = await window.supabaseClient.from('pac_cases').upsert(rows, { onConflict: 'id' });
+      if (!error) {
+        render();
+        return;
+      }
+    } catch (_) {}
+  }
+
   render();
 }
 
@@ -71,7 +79,7 @@ function tab(x){$('#listView').classList.toggle('hidden',x!=='list');$('#formVie
 function newPAC(){editing=null;f.reset();$('#delete').classList.add('hidden');f.adviceTime.value=new Date(Date.now()-new Date().getTimezoneOffset()*60000).toISOString().slice(0,16);tab('form')}
 function edit(id){const c=cases.find(x=>x.id===id);if(!c)return;editing=id;Object.keys(c).forEach(k=>{if(f.elements[k])f.elements[k].value=c[k]||''});$('#delete').classList.remove('hidden');tab('form')}
 async function del(){if(editing&&confirm('Delete this PAC record?')){cases=cases.filter(c=>c.id!==editing);await save();tab('list')}}
-f.onsubmit=async e=>{e.preventDefault();const o={id:editing||crypto.randomUUID(),updatedAt:new Date().toISOString()};for(const el of f.elements)if(el.name)o[el.name]=el.value.trim();const i=cases.findIndex(c=>c.id===o.id);if(i<0)cases.unshift(o);else cases[i]=o;await save();tab('list')};
+f.onsubmit=async e=>{e.preventDefault();const o={id:editing||crypto.randomUUID(),updated_at:new Date().toISOString()};for(const el of f.elements)if(el.name)o[el.name]=el.value.trim();const i=cases.findIndex(c=>c.id===o.id);if(i<0)cases.unshift(o);else cases[i]=o;await save();tab('list')};
 function sendOT(id){const c=cases.find(x=>x.id===id);localStorage.setItem(BRIDGE,JSON.stringify({...c,sentAt:new Date().toISOString()}));alert('PAC patient selected for OT. Next we can connect this directly to the existing OT form.')}
 function render(){const el=$('#list');if(!cases.length){el.innerHTML='<div class="muted">No PAC cases yet. Create the first PAC.</div>';return}el.innerHTML=cases.map(c=>`<div class="card case" onclick="edit('${c.id}')"><div class="row"><div><b>${esc(c.name)}</b><div class="muted">${esc(c.age)} ${esc(c.sex)} · ${esc(c.diagnosis)}</div></div><span class="badge ${c.status==='Cleared'?'cleared':c.status==='Hold'?'hold':'pending'}">${esc(c.status||'Pending')}</span></div><div class="muted" style="margin-top:6px">Procedure: ${esc(c.procedure)}</div><div class="actions"><button class="secondary" onclick="event.stopPropagation();edit('${c.id}')">Edit</button><button class="primary" onclick="event.stopPropagation();sendOT('${c.id}')">Send to OT</button></div></div>`).join('')}
 loadCases().then(render);

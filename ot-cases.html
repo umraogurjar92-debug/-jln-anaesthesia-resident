@@ -26,6 +26,7 @@
 
 <div class="modal" id="eventModal"><div class="sheet"><div class="sheethead"><h2>Add event</h2><button class="close" type="button" data-close="eventModal">×</button></div><form id="eventForm"><input type="hidden" name="id"><div class="form"><div class="field"><label>Event</label><select name="type"><option>Drug given</option><option>Airway event</option><option>Vital sign problem</option><option>Fluid / blood product</option><option>Regional / block</option><option>Procedure milestone</option><option>Problem / complication</option><option>Other</option></select></div><div class="field"><label>Time</label><input name="time" type="time" required></div><div class="field full"><label>Details</label><textarea name="detail" required></textarea></div></div><div class="sheetactions"><button type="button" class="secondary" data-close="eventModal">Cancel</button><button type="submit" class="primary">Add event</button></div></form></div></div>
 
+<script src="/supabase-config.js"></script>
 <script>
 (function(){
 'use strict';
@@ -41,12 +42,18 @@ const dateOf=c=>c.date||((c.createdAt||'').slice(0,10))||today();
 const dateLabel=s=>{const p=s.split('-');if(p.length!==3)return s;return new Date(+p[0],+p[1]-1,+p[2]).toLocaleDateString([],{weekday:'long',day:'numeric',month:'long',year:'numeric'});};
 
 async function loadCases(){
-  try{
-    const res=await fetch('/api/ot-cases');
-    if(!res.ok) throw new Error('API failed');
-    const data=await res.json();
-    if(Array.isArray(data)){cases=data;localStorage.setItem(KEY,JSON.stringify(cases));return;}
-  }catch(_){ }
+  if (window.supabaseClient) {
+    try {
+      const { data, error } = await window.supabaseClient.from('ot_cases').select('*').order('created_at', { ascending: false });
+      if (!error && Array.isArray(data)) {
+        cases=data;
+        localStorage.setItem(KEY, JSON.stringify(cases));
+        render();
+        return;
+      }
+    } catch (_) {}
+  }
+
   try{
     cases=JSON.parse(localStorage.getItem(KEY)||'[]');
     if(!Array.isArray(cases)) cases=[];
@@ -54,13 +61,23 @@ async function loadCases(){
 }
 
 async function save(){
-  localStorage.setItem(KEY,JSON.stringify(cases));
-  try{
-    const res=await fetch('/api/ot-cases',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(cases)});
-    if(!res.ok) throw new Error('Persist failed');
-    const data=await res.json();
-    if(Array.isArray(data)) cases=data;
-  }catch(_){ }
+  localStorage.setItem(KEY, JSON.stringify(cases));
+
+  if (window.supabaseClient) {
+    try {
+      const rows = cases.map(item => ({
+        ...item,
+        created_at: item.created_at || new Date().toISOString()
+      }));
+
+      const { error } = await window.supabaseClient.from('ot_cases').upsert(rows, { onConflict: 'id' });
+      if (!error) {
+        render();
+        return;
+      }
+    } catch (_) {}
+  }
+
   render();
 }
 
