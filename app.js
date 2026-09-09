@@ -60,6 +60,31 @@
     return null;
   }
 
+  // --- 20-minute Interval Helpers (4 to 6 Hour Duration) ---
+  const INTERVAL_MINUTES = 20;
+  const MAX_DURATION_HOURS = 6;
+  const TOTAL_INTERVALS = (MAX_DURATION_HOURS * 60) / INTERVAL_MINUTES; // 18 intervals = 19 points (0 to 18)
+
+  function getTimeForInterval(startTimeStr, intervalIdx) {
+    if (!startTimeStr) return '';
+    const parts = startTimeStr.split(':').map(Number);
+    if (parts.length < 2 || isNaN(parts[0]) || isNaN(parts[1])) return '';
+    const totalMinutes = parts[0] * 60 + parts[1] + intervalIdx * INTERVAL_MINUTES;
+    const h = Math.floor((totalMinutes / 60) % 24);
+    const m = Math.floor(totalMinutes % 60);
+    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+  }
+
+  function getIntervalLabel(intervalIdx) {
+    if (intervalIdx === 0) return '0m (Start)';
+    const totalMins = intervalIdx * INTERVAL_MINUTES;
+    const h = Math.floor(totalMins / 60);
+    const m = totalMins % 60;
+    if (h === 0) return `+${m}m`;
+    if (m === 0) return `+${h}h`;
+    return `+${h}h ${m}m`;
+  }
+
   // --- Theme Management ---
   function initTheme() {
     const saved = localStorage.getItem(STORAGE_KEYS.THEME) || 'light';
@@ -516,8 +541,12 @@
         delete data[f];
       }
     });
+    const timePoints = [];
     if (hasInitialMonitor) {
       initialMonitor.time = formatTimeNow();
+      initialMonitor.intervalIndex = 0;
+      initialMonitor.label = '0m (Start)';
+      timePoints[0] = { ...initialMonitor };
     }
 
     const now = new Date();
@@ -533,6 +562,7 @@
       completed_at: null,
       events: [],
       latest_monitor: initialMonitor,
+      time_points: timePoints,
       monitoring: data.monitoring || ['ECG', 'NIBP', 'SpO₂']
     };
 
@@ -544,21 +574,85 @@
     pushOtToCloud(caseItem);
   }
 
-  function openUpdateVitalsModal(caseId) {
+  function openUpdateVitalsModal(caseId, targetIntervalIdx = null) {
     const c = state.otCases.find((x) => x.id === caseId);
     if (!c) return;
     state.activeOtCaseId = caseId;
+    if (!Array.isArray(c.time_points)) c.time_points = [];
+
     const form = $('updateVitalsForm');
     form.reset();
     form.elements.caseId.value = caseId;
 
-    const v = c.latest_monitor || {};
-    Object.keys(v).forEach((k) => {
-      if (form.elements[k]) form.elements[k].value = v[k] || '';
-    });
+    const intervalSelect = $('vitalsIntervalSelect');
+    if (intervalSelect) {
+      intervalSelect.innerHTML = '';
+      for (let i = 0; i <= TOTAL_INTERVALS; i++) {
+        const label = getIntervalLabel(i);
+        const calcTime = getTimeForInterval(c.time, i);
+        const existing = c.time_points[i];
+        const isLogged = Boolean(existing && (existing.bp || existing.hr || existing.spo2 || existing.ventmode));
+        const opt = document.createElement('option');
+        opt.value = String(i);
+        opt.textContent = `${label} (${calcTime || '—'})${isLogged ? ' ✓ Logged' : ''}`;
+        intervalSelect.appendChild(opt);
+      }
 
-    $('vitalsModalPatient').textContent = `${c.patient} (${c.ot || 'OT'})`;
+      let selectedIdx = 0;
+      if (targetIntervalIdx != null) {
+        selectedIdx = parseInt(targetIntervalIdx, 10);
+      } else {
+        let firstUnfilled = 0;
+        while (firstUnfilled <= TOTAL_INTERVALS && c.time_points[firstUnfilled]) {
+          firstUnfilled++;
+        }
+        selectedIdx = firstUnfilled <= TOTAL_INTERVALS ? firstUnfilled : 0;
+      }
+      intervalSelect.value = String(selectedIdx);
+      loadIntervalIntoForm(c, selectedIdx);
+
+      intervalSelect.onchange = () => {
+        loadIntervalIntoForm(c, parseInt(intervalSelect.value, 10));
+      };
+    }
+
+    $('vitalsModalPatient').textContent = `${c.patient} (${c.ot || 'OT'}) · Started: ${c.time || '—'}`;
     openModal('updateVitalsModal');
+  }
+
+  function loadIntervalIntoForm(c, intervalIdx) {
+    const form = $('updateVitalsForm');
+    const existing = c.time_points && c.time_points[intervalIdx];
+
+    let prevVent = {};
+    if (Array.isArray(c.time_points)) {
+      for (let j = intervalIdx - 1; j >= 0; j--) {
+        if (c.time_points[j] && c.time_points[j].ventmode) {
+          prevVent = c.time_points[j];
+          break;
+        }
+      }
+    }
+    if (!prevVent.ventmode && c.latest_monitor && c.latest_monitor.ventmode) {
+      prevVent = c.latest_monitor;
+    }
+
+    const dataSource = existing || {
+      ventmode: prevVent.ventmode || '',
+      tv: prevVent.tv || '',
+      rr: prevVent.rr || '',
+      ie: prevVent.ie || '',
+      ppeak: prevVent.ppeak || '',
+      peep: prevVent.peep || '',
+      fio2: prevVent.fio2 || ''
+    };
+
+    const vitalsFields = ['bp', 'hr', 'spo2', 'etco2', 'temp', 'urine', 'fluid', 'infusion', 'ventmode', 'tv', 'rr', 'ie', 'ppeak', 'peep', 'fio2', 'note'];
+    vitalsFields.forEach((k) => {
+      if (form.elements[k]) {
+        form.elements[k].value = dataSource[k] || '';
+      }
+    });
   }
 
   async function handleUpdateVitalsSubmit(e) {
@@ -568,13 +662,21 @@
     const c = state.otCases.find((x) => x.id === caseId);
     if (!c) return;
 
+    if (!Array.isArray(c.time_points)) c.time_points = [];
+
+    const intervalIdx = parseInt(form.elements.intervalIndex.value, 10);
     const fd = new FormData(form);
     const v = {};
     for (const [key, val] of fd.entries()) {
-      if (key !== 'caseId') v[key] = val.trim();
+      if (key !== 'caseId' && key !== 'intervalIndex') {
+        v[key] = val.trim();
+      }
     }
-    v.time = formatTimeNow();
+    v.intervalIndex = intervalIdx;
+    v.label = getIntervalLabel(intervalIdx);
+    v.time = getTimeForInterval(c.time, intervalIdx) || formatTimeNow();
 
+    c.time_points[intervalIdx] = v;
     c.latest_monitor = v;
     c.updated_at = new Date().toISOString();
 
@@ -702,6 +804,103 @@
     container.innerHTML = html;
   }
 
+  function renderTimepointsFlowsheet(c) {
+    if (!Array.isArray(c.time_points)) c.time_points = [];
+    const startTime = c.time || '';
+
+    // Find next unlogged interval
+    let nextUnlogged = 0;
+    while (nextUnlogged <= TOTAL_INTERVALS && c.time_points[nextUnlogged]) {
+      nextUnlogged++;
+    }
+    if (nextUnlogged > TOTAL_INTERVALS) nextUnlogged = TOTAL_INTERVALS;
+
+    let headersHtml = '<th class="sticky-col">Parameter</th>';
+    let hrRow = '<td class="sticky-col"><b>HR (bpm)</b></td>';
+    let bpRow = '<td class="sticky-col"><b>BP (mmHg)</b></td>';
+    let spo2Row = '<td class="sticky-col"><b>SpO₂ (%)</b></td>';
+    let etco2Row = '<td class="sticky-col"><b>EtCO₂ (mmHg)</b></td>';
+    let ventModeRow = '<td class="sticky-col"><b>Vent Mode</b></td>';
+    let vtRow = '<td class="sticky-col"><b>Vt / RR</b></td>';
+    let ieRow = '<td class="sticky-col"><b>I:E / Ppeak</b></td>';
+    let peepRow = '<td class="sticky-col"><b>PEEP / FiO₂</b></td>';
+    let fluidsRow = '<td class="sticky-col"><b>Fluids / Note</b></td>';
+    let actionsRow = '<td class="sticky-col"><b>Action</b></td>';
+
+    for (let i = 0; i <= TOTAL_INTERVALS; i++) {
+      const label = getIntervalLabel(i);
+      const calcTime = getTimeForInterval(startTime, i);
+      const data = c.time_points[i] || {};
+      const isLogged = Boolean(data.bp || data.hr || data.spo2 || data.ventmode);
+      const mapVal = calculateMAP(data.bp);
+
+      headersHtml += `
+        <th>
+          ${escapeHtml(label)}
+          <span class="flowsheet-time-badge">${escapeHtml(calcTime || '—')}</span>
+        </th>
+      `;
+
+      hrRow += `<td class="${data.hr ? 'flowsheet-logged-cell' : ''}">${escapeHtml(data.hr || '—')}</td>`;
+      bpRow += `<td class="${data.bp ? 'flowsheet-logged-cell' : ''}">
+        ${escapeHtml(data.bp || '—')}
+        ${mapVal ? `<br><span class="map-sub">MAP ${mapVal}</span>` : ''}
+      </td>`;
+      spo2Row += `<td class="${data.spo2 ? 'flowsheet-logged-cell' : ''}">${escapeHtml(data.spo2 ? `${data.spo2}%` : '—')}</td>`;
+      etco2Row += `<td class="${data.etco2 ? 'flowsheet-logged-cell' : ''}">${escapeHtml(data.etco2 || '—')}</td>`;
+      ventModeRow += `<td>${escapeHtml(data.ventmode || '—')}</td>`;
+      vtRow += `<td>${data.tv || data.rr ? `${escapeHtml(data.tv || '—')} / ${escapeHtml(data.rr || '—')}` : '—'}</td>`;
+      ieRow += `<td>${data.ie || data.ppeak ? `${escapeHtml(data.ie || '—')} / ${escapeHtml(data.ppeak || '—')}` : '—'}</td>`;
+      peepRow += `<td>${data.peep || data.fio2 ? `${escapeHtml(data.peep || '—')} / ${escapeHtml(data.fio2 ? `${data.fio2}%` : '—')}` : '—'}</td>`;
+      fluidsRow += `<td>${escapeHtml(data.fluid || data.note || data.infusion || '—')}</td>`;
+
+      actionsRow += `
+        <td>
+          ${isLogged ? `
+            <button class="flowsheet-edit-btn" type="button" onclick="event.stopPropagation();window.JLN_APP.updateVitals('${escapeHtml(c.id)}', ${i})">
+              Edit
+            </button>
+          ` : `
+            <button class="flowsheet-add-btn" type="button" onclick="event.stopPropagation();window.JLN_APP.updateVitals('${escapeHtml(c.id)}', ${i})">
+              ＋ Log
+            </button>
+          `}
+        </td>
+      `;
+    }
+
+    return `
+      <div class="flowsheet-container">
+        <div class="flowsheet-topbar">
+          <div>
+            <span class="flowsheet-heading">⏱️ 20-min Interval Monitor View (4–6 hr Duration)</span>
+            <span class="flowsheet-sub">19 time points from case start (${escapeHtml(startTime || '—')})</span>
+          </div>
+          <button class="btn btn-primary btn-sm" type="button" onclick="event.stopPropagation();window.JLN_APP.updateVitals('${escapeHtml(c.id)}', ${nextUnlogged})">
+            ＋ Log Interval ${escapeHtml(getIntervalLabel(nextUnlogged))}
+          </button>
+        </div>
+        <div class="flowsheet-scroll">
+          <table class="flowsheet-table">
+            <thead><tr>${headersHtml}</tr></thead>
+            <tbody>
+              <tr>${hrRow}</tr>
+              <tr>${bpRow}</tr>
+              <tr>${spo2Row}</tr>
+              <tr>${etco2Row}</tr>
+              <tr>${ventModeRow}</tr>
+              <tr>${vtRow}</tr>
+              <tr>${ieRow}</tr>
+              <tr>${peepRow}</tr>
+              <tr>${fluidsRow}</tr>
+              <tr>${actionsRow}</tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
+  }
+
   function renderSingleOtCase(c) {
     const st = getCaseStatus(c);
     const v = c.latest_monitor || {};
@@ -759,6 +958,9 @@
             ${v.note ? `<div><b>Intra-op Note:</b> ${escapeHtml(v.note)}</div>` : ''}
           </div>
         ` : ''}
+
+        <!-- Horizontal 20-minute Interval Flowsheet (4 to 6 hr Duration) -->
+        ${renderTimepointsFlowsheet(c)}
 
         ${events.length ? `
           <div class="timeline">
@@ -1001,7 +1203,7 @@
     editPac: (id) => editPacCase(id),
     sendToOt: (id) => sendPacToOt(id),
     startNewCase: (prefill) => openStartCaseModal(prefill),
-    updateVitals: (id) => openUpdateVitalsModal(id),
+    updateVitals: (id, intervalIndex = null) => openUpdateVitalsModal(id, intervalIndex),
     addEvent: (id) => openAddEventModal(id),
     completeCase: (id) => completeOtCase(id),
     deleteCase: (id) => deleteOtCase(id)
