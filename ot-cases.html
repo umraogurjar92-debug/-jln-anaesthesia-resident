@@ -32,7 +32,6 @@
 const KEY='jln_ot_cases_v1';
 const OTS=['OT A','Lap OT','SSR','SSE','OT B','Septic OT','Emergency OT','Robotic OT'];
 let cases=[];
-try{cases=JSON.parse(localStorage.getItem(KEY)||'[]');if(!Array.isArray(cases))cases=[];}catch(e){cases=[];}
 const $=id=>document.getElementById(id);
 const esc=v=>{const d=document.createElement('div');d.textContent=v==null?'':String(v);return d.innerHTML;};
 const uid=()=>window.crypto&&crypto.randomUUID?crypto.randomUUID():Date.now().toString(36)+Math.random().toString(36).slice(2);
@@ -40,7 +39,31 @@ const today=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth
 const timeNow=()=>new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',hour12:false});
 const dateOf=c=>c.date||((c.createdAt||'').slice(0,10))||today();
 const dateLabel=s=>{const p=s.split('-');if(p.length!==3)return s;return new Date(+p[0],+p[1]-1,+p[2]).toLocaleDateString([],{weekday:'long',day:'numeric',month:'long',year:'numeric'});};
-function save(){localStorage.setItem(KEY,JSON.stringify(cases));render();}
+
+async function loadCases(){
+  try{
+    const res=await fetch('/api/ot-cases');
+    if(!res.ok) throw new Error('API failed');
+    const data=await res.json();
+    if(Array.isArray(data)){cases=data;localStorage.setItem(KEY,JSON.stringify(cases));return;}
+  }catch(_){ }
+  try{
+    cases=JSON.parse(localStorage.getItem(KEY)||'[]');
+    if(!Array.isArray(cases)) cases=[];
+  }catch(_){ cases=[]; }
+}
+
+async function save(){
+  localStorage.setItem(KEY,JSON.stringify(cases));
+  try{
+    const res=await fetch('/api/ot-cases',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(cases)});
+    if(!res.ok) throw new Error('Persist failed');
+    const data=await res.json();
+    if(Array.isArray(data)) cases=data;
+  }catch(_){ }
+  render();
+}
+
 function openModal(id){$(id).classList.add('open');}
 function closeModal(id){$(id).classList.remove('open');}
 function status(c){if(c.completed)return['done','Completed'];const bad=(c.events||[]).some(e=>e.type==='Problem / complication'||e.type==='Vital sign problem');return bad?['problem','Problem']:['ongoing','Ongoing'];}
@@ -70,12 +93,12 @@ function formData(form){const fd=new FormData(form);const o={};for(const [k,v] o
 $('newCase').addEventListener('click',()=>openModal('caseModal'));
 $('rTab').addEventListener('click',()=>{ $('rTab').classList.add('active');$('cTab').classList.remove('active');$('resident').style.display='block';$('consultant').style.display='none';});
 $('cTab').addEventListener('click',()=>{ $('cTab').classList.add('active');$('rTab').classList.remove('active');$('consultant').style.display='block';$('resident').style.display='none';});
-document.addEventListener('click',e=>{const close=e.target.closest('[data-close]');if(close)closeModal(close.dataset.close);const mon=e.target.closest('[data-monitor]');if(mon){const c=cases.find(x=>x.id===mon.dataset.monitor);if(!c)return;const f=$('monitorForm');f.reset();f.elements.id.value=c.id;Object.entries(c.latestMonitor||{}).forEach(([k,v])=>{if(f.elements[k])f.elements[k].value=v||'';});openModal('monitorModal');}const ev=e.target.closest('[data-event]');if(ev){const f=$('eventForm');f.reset();f.elements.id.value=ev.dataset.event;f.elements.time.value=timeNow();openModal('eventModal');}const done=e.target.closest('[data-complete]');if(done){const c=cases.find(x=>x.id===done.dataset.complete);if(c){c.completed=true;c.completedAt=new Date().toISOString();save();}}const del=e.target.closest('[data-delete]');if(del){const c=cases.find(x=>x.id===del.dataset.delete);if(c&&confirm('Delete this case?')){cases=cases.filter(x=>x.id!==c.id);save();}}});
-$('caseForm').addEventListener('submit',e=>{e.preventDefault();const d=formData(e.target);const n=new Date();cases.push({...d,id:uid(),date:today(),createdAt:n.toISOString(),time:timeNow(),events:[],latestMonitor:{},completed:false});e.target.reset();closeModal('caseModal');save();});
-$('monitorForm').addEventListener('submit',e=>{e.preventDefault();const d=formData(e.target),c=cases.find(x=>x.id===d.id);if(!c)return;delete d.id;d.time=timeNow();c.latestMonitor=d;closeModal('monitorModal');save();});
-$('eventForm').addEventListener('submit',e=>{e.preventDefault();const d=formData(e.target),c=cases.find(x=>x.id===d.id);if(!c)return;delete d.id;(c.events||(c.events=[])).push(d);closeModal('eventModal');save();});
+document.addEventListener('click',async e=>{const close=e.target.closest('[data-close]');if(close)closeModal(close.dataset.close);const mon=e.target.closest('[data-monitor]');if(mon){const c=cases.find(x=>x.id===mon.dataset.monitor);if(!c)return;const f=$('monitorForm');f.reset();f.elements.id.value=c.id;Object.entries(c.latestMonitor||{}).forEach(([k,v])=>{if(f.elements[k])f.elements[k].value=v||'';});openModal('monitorModal');}const ev=e.target.closest('[data-event]');if(ev){const f=$('eventForm');f.reset();f.elements.id.value=ev.dataset.event;f.elements.time.value=timeNow();openModal('eventModal');}const done=e.target.closest('[data-complete]');if(done){const c=cases.find(x=>x.id===done.dataset.complete);if(c){c.completed=true;c.completedAt=new Date().toISOString();await save();}}const del=e.target.closest('[data-delete]');if(del){const c=cases.find(x=>x.id===del.dataset.delete);if(c&&confirm('Delete this case?')){cases=cases.filter(x=>x.id!==c.id);await save();}}});
+$('caseForm').addEventListener('submit',async e=>{e.preventDefault();const d=formData(e.target);const n=new Date();cases.push({...d,id:uid(),date:today(),createdAt:n.toISOString(),time:timeNow(),events:[],latestMonitor:{},completed:false});e.target.reset();closeModal('caseModal');await save();});
+$('monitorForm').addEventListener('submit',async e=>{e.preventDefault();const d=formData(e.target),c=cases.find(x=>x.id===d.id);if(!c)return;delete d.id;d.time=timeNow();c.latestMonitor=d;closeModal('monitorModal');await save();});
+$('eventForm').addEventListener('submit',async e=>{e.preventDefault();const d=formData(e.target),c=cases.find(x=>x.id===d.id);if(!c)return;delete d.id;(c.events||(c.events=[])).push(d);closeModal('eventModal');await save();});
 ['caseModal','monitorModal','eventModal'].forEach(id=>$(id).addEventListener('click',e=>{if(e.target.id===id)closeModal(id);}));
-render();
+loadCases().then(render);
 })();
 </script>
 </body>

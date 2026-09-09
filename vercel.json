@@ -1,0 +1,9 @@
+{
+  "cleanUrls": true,
+  "trailingSlash": false,
+  "routes": [
+    { "src": "/", "dest": "/index.html" },
+    { "src": "/ot-cases", "dest": "/ot-cases.html" },
+    { "src": "/pac", "dest": "/pac.html" }
+  ]
+}
