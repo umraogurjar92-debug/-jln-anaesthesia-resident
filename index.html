@@ -1,4 +1,4 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
@@ -391,21 +391,106 @@
                 <option>Other</option>
               </select>
             </div>
-            <div class="form-group col-span-full">
-              <label class="form-label">Active Monitoring In Use</label>
-              <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(130px, 1fr));gap:6px;background:var(--surface);padding:10px;border-radius:var(--radius-sm)">
-                <label style="font-size:12px;display:flex;align-items:center;gap:6px"><input type="checkbox" name="monitor" value="ECG" checked> ECG</label>
-                <label style="font-size:12px;display:flex;align-items:center;gap:6px"><input type="checkbox" name="monitor" value="NIBP" checked> NIBP</label>
-                <label style="font-size:12px;display:flex;align-items:center;gap:6px"><input type="checkbox" name="monitor" value="SpO₂" checked> SpO₂</label>
-                <label style="font-size:12px;display:flex;align-items:center;gap:6px"><input type="checkbox" name="monitor" value="EtCO₂" checked> EtCO₂</label>
-                <label style="font-size:12px;display:flex;align-items:center;gap:6px"><input type="checkbox" name="monitor" value="Temp"> Temperature</label>
-                <label style="font-size:12px;display:flex;align-items:center;gap:6px"><input type="checkbox" name="monitor" value="Arterial Line"> Arterial Line</label>
-                <label style="font-size:12px;display:flex;align-items:center;gap:6px"><input type="checkbox" name="monitor" value="CVP"> CVP</label>
-                <label style="font-size:12px;display:flex;align-items:center;gap:6px"><input type="checkbox" name="monitor" value="BIS / Depth"> BIS / Depth</label>
-                <label style="font-size:12px;display:flex;align-items:center;gap:6px"><input type="checkbox" name="monitor" value="Urine Output"> Urine Output</label>
+              <div class="form-group col-span-full">
+                <label class="form-label">Active Monitoring In Use</label>
+                <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(130px, 1fr));gap:6px;background:var(--surface);padding:10px;border-radius:var(--radius-sm)">
+                  <label style="font-size:12px;display:flex;align-items:center;gap:6px"><input type="checkbox" name="monitor" value="ECG" checked> ECG</label>
+                  <label style="font-size:12px;display:flex;align-items:center;gap:6px"><input type="checkbox" name="monitor" value="NIBP" checked> NIBP</label>
+                  <label style="font-size:12px;display:flex;align-items:center;gap:6px"><input type="checkbox" name="monitor" value="SpO₂" checked> SpO₂</label>
+                  <label style="font-size:12px;display:flex;align-items:center;gap:6px"><input type="checkbox" name="monitor" value="EtCO₂" checked> EtCO₂</label>
+                  <label style="font-size:12px;display:flex;align-items:center;gap:6px"><input type="checkbox" name="monitor" value="Temp"> Temperature</label>
+                  <label style="font-size:12px;display:flex;align-items:center;gap:6px"><input type="checkbox" name="monitor" value="Arterial Line"> Arterial Line</label>
+                  <label style="font-size:12px;display:flex;align-items:center;gap:6px"><input type="checkbox" name="monitor" value="CVP"> CVP</label>
+                  <label style="font-size:12px;display:flex;align-items:center;gap:6px"><input type="checkbox" name="monitor" value="BIS / Depth"> BIS / Depth</label>
+                  <label style="font-size:12px;display:flex;align-items:center;gap:6px"><input type="checkbox" name="monitor" value="Urine Output"> Urine Output</label>
+                </div>
+              </div>
+
+              <!-- Baseline Intra-op Vitals (Monitor View) -->
+              <div class="form-group col-span-full" style="border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px;background:var(--surface);margin-top:6px">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+                  <div style="font-size:12px;font-weight:800;color:var(--primary);display:flex;align-items:center;gap:6px">
+                    📊 Baseline Intra-op Vitals (Monitor View)
+                  </div>
+                  <span style="font-size:11px;color:var(--text-muted);font-weight:600">Baseline readings</span>
+                </div>
+                <div class="form-grid">
+                  <div class="form-group">
+                    <label class="form-label">Heart Rate (HR bpm)</label>
+                    <input name="hr" type="number" class="form-control" placeholder="e.g. 76">
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Blood Pressure (BP mmHg)</label>
+                    <input name="bp" class="form-control" placeholder="e.g. 120/80">
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">SpO₂ (%)</label>
+                    <input name="spo2" type="number" class="form-control" placeholder="e.g. 99">
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">EtCO₂ (mmHg)</label>
+                    <input name="etco2" type="number" class="form-control" placeholder="e.g. 35">
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Temperature (°C)</label>
+                    <input name="temp" type="number" step="0.1" class="form-control" placeholder="e.g. 36.5">
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Urine Output (mL)</label>
+                    <input name="urine" type="number" class="form-control" placeholder="e.g. 100">
+                  </div>
+                </div>
+              </div>
+
+              <!-- Ventilator Settings View -->
+              <div class="form-group col-span-full" style="border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px;background:var(--surface);margin-top:4px">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+                  <div style="font-size:12px;font-weight:800;color:var(--primary);display:flex;align-items:center;gap:6px">
+                    🫁 Ventilator Settings View
+                  </div>
+                  <span style="font-size:11px;color:var(--text-muted);font-weight:600">Mechanical ventilation</span>
+                </div>
+                <div class="form-grid">
+                  <div class="form-group">
+                    <label class="form-label">Mode</label>
+                    <select name="ventmode" class="form-control">
+                      <option value="">Spontaneous / Not Ventilated</option>
+                      <option>VCV (Volume Control)</option>
+                      <option>PCV (Pressure Control)</option>
+                      <option>SIMV-VC</option>
+                      <option>SIMV-PC</option>
+                      <option>PSV</option>
+                      <option>CPAP</option>
+                      <option>Other</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Vt (Tidal Volume mL)</label>
+                    <input name="tv" type="number" class="form-control" placeholder="e.g. 450">
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">RR (Rate /min)</label>
+                    <input name="rr" type="number" class="form-control" placeholder="e.g. 14">
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">I:E Ratio</label>
+                    <input name="ie" class="form-control" placeholder="e.g. 1:2">
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Ppeak (cmH₂O)</label>
+                    <input name="ppeak" type="number" class="form-control" placeholder="e.g. 18">
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">PEEP (cmH₂O)</label>
+                    <input name="peep" type="number" class="form-control" placeholder="e.g. 5">
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">FiO₂ (%)</label>
+                    <input name="fio2" type="number" class="form-control" placeholder="e.g. 40">
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
         </div>
         <div class="modal-footer">
           <button class="btn btn-secondary" data-close-modal="startCaseModal" type="button">Cancel</button>
@@ -482,6 +567,14 @@
                 <div class="form-group">
                   <label class="form-label">Rate (/min)</label>
                   <input name="rr" type="number" class="form-control" placeholder="e.g. 14">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">I:E Ratio</label>
+                  <input name="ie" class="form-control" placeholder="e.g. 1:2">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Ppeak (cmH₂O)</label>
+                  <input name="ppeak" type="number" class="form-control" placeholder="e.g. 18">
                 </div>
                 <div class="form-group">
                   <label class="form-label">PEEP (cmH₂O)</label>

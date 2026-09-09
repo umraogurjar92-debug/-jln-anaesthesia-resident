@@ -1,4 +1,4 @@
-﻿(function () {
+(function () {
   'use strict';
 
   // --- Constants & Storage Keys ---
@@ -505,6 +505,21 @@
       }
     }
 
+    // Extract baseline intra-op monitor & ventilator settings if entered
+    const initialMonitor = {};
+    const monitorFields = ['bp', 'hr', 'spo2', 'etco2', 'temp', 'urine', 'ventmode', 'tv', 'rr', 'ie', 'ppeak', 'peep', 'fio2'];
+    let hasInitialMonitor = false;
+    monitorFields.forEach((f) => {
+      if (data[f]) {
+        initialMonitor[f] = data[f];
+        hasInitialMonitor = true;
+        delete data[f];
+      }
+    });
+    if (hasInitialMonitor) {
+      initialMonitor.time = formatTimeNow();
+    }
+
     const now = new Date();
     const id = uid();
     const caseItem = {
@@ -517,7 +532,7 @@
       completed: false,
       completed_at: null,
       events: [],
-      latest_monitor: {},
+      latest_monitor: initialMonitor,
       monitoring: data.monitoring || ['ECG', 'NIBP', 'SpO₂']
     };
 
@@ -740,7 +755,7 @@
           <div style="font-size:11px;background:var(--surface);padding:8px 10px;border-radius:var(--radius-sm);color:var(--text);margin-top:6px">
             ${v.fluid ? `<div><b>Fluids:</b> ${escapeHtml(v.fluid)}</div>` : ''}
             ${v.infusion ? `<div><b>Infusions:</b> ${escapeHtml(v.infusion)}</div>` : ''}
-            ${v.ventmode ? `<div><b>Ventilator:</b> ${escapeHtml(v.ventmode)} · TV ${escapeHtml(v.tv || '—')} mL · RR ${escapeHtml(v.rr || '—')} · PEEP ${escapeHtml(v.peep || '—')} · FiO₂ ${escapeHtml(v.fio2 || '—')}%</div>` : ''}
+            ${v.ventmode ? `<div><b>Ventilator (${escapeHtml(v.ventmode)}):</b> Vt ${escapeHtml(v.tv || '—')} mL · RR ${escapeHtml(v.rr || '—')} /min${v.ie ? ` · I:E ${escapeHtml(v.ie)}` : ''}${v.ppeak ? ` · Ppeak ${escapeHtml(v.ppeak)} cmH₂O` : ''} · PEEP ${escapeHtml(v.peep || '—')} cmH₂O · FiO₂ ${escapeHtml(v.fio2 || '—')}%</div>` : ''}
             ${v.note ? `<div><b>Intra-op Note:</b> ${escapeHtml(v.note)}</div>` : ''}
           </div>
         ` : ''}
