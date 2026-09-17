@@ -68,7 +68,8 @@
         /openAddEventModal\(['"]([^'"]+)['"]/, 
         /completeOtCase\(['"]([^'"]+)['"]/, 
         /deleteOtCase\(['"]([^'"]+)['"]/, 
-        /editOtCase\(['"]([^'"]+)['"]/
+        /editOtCase\(['"]([^'"]+)['"]/, 
+        /window\.JLN_APP\.[A-Za-z0-9_]*(?:vital|event|complete|delete|edit)[A-Za-z0-9_]*\(['"]([^'"]+)['"]/
       ];
       for (const re of patterns) {
         const m = value.match(re);
