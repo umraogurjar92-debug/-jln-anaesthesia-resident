@@ -9,6 +9,7 @@ create table if not exists public.pac_cases (
   sex text,
   diagnosis text,
   procedure text,
+  department text,
   comorbidities text,
   medications text,
   airway text,
@@ -45,6 +46,10 @@ create table if not exists public.ot_cases (
   updated_at timestamptz default now()
 );
 
+-- Safe migration for an existing PAC table.
+alter table public.pac_cases add column if not exists department text;
+
+create index if not exists pac_cases_department_idx on public.pac_cases (department);
 create index if not exists pac_cases_updated_at_idx on public.pac_cases (updated_at desc);
 create index if not exists ot_cases_date_idx on public.ot_cases (date desc);
 create index if not exists ot_cases_completed_idx on public.ot_cases (completed);
