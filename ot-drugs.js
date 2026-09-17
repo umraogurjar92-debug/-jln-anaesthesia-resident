@@ -64,7 +64,11 @@
       const value = node.getAttribute && node.getAttribute('onclick');
       if (!value) continue;
       const patterns = [
-        /openUpdateVitalsModal\(['"]([^'"]+)['"]/, /openAddEventModal\(['"]([^'"]+)['"]/,\n        /completeOtCase\(['"]([^'"]+)['"]/, /deleteOtCase\(['"]([^'"]+)['"]/,\n        /editOtCase\(['"]([^'"]+)['"]/
+        /openUpdateVitalsModal\(['"]([^'"]+)['"]/, 
+        /openAddEventModal\(['"]([^'"]+)['"]/, 
+        /completeOtCase\(['"]([^'"]+)['"]/, 
+        /deleteOtCase\(['"]([^'"]+)['"]/, 
+        /editOtCase\(['"]([^'"]+)['"]/
       ];
       for (const re of patterns) {
         const m = value.match(re);
