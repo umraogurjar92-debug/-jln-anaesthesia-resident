@@ -102,7 +102,6 @@
       card.style.display = (wanted === 'ALL' || wanted === dept) ? '' : 'none';
     });
 
-    // Add department badge to each visible PAC card.
     list.querySelectorAll(':scope > .card').forEach(card => {
       const onclick = card.getAttribute('onclick') || '';
       const match = onclick.match(/editPac\\('([^']+)'\\)/);
@@ -140,3 +139,6 @@
     init();
   }
 })();
+
+// Load the OT Drugs & Fluids enhancement before the main app script.
+document.write('<script src="/ot-drugs.js"><\\/script>');
