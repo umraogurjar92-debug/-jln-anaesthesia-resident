@@ -141,3 +141,6 @@ window.supabase = window.supabase || {
 window.supabaseClient = window.JLN_SUPABASE_READY
   ? window.supabase.createClient(window.JLN_SUPABASE.url, window.JLN_SUPABASE.anonKey)
   : null;
+
+// Load the PAC department enhancement before the main app script.
+document.write('<script src="/department.js"><\\/script>');
