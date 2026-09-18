@@ -1,12 +1,21 @@
-// Load custom Supabase config from localStorage if saved by user
+// Load saved Supabase config. Keep a cookie fallback because some browsers/privacy
+// modes can clear or block localStorage between visits. The publishable key is
+// client-side by design, so storing it locally is expected for this app.
+const DEFAULT_SUPABASE_URL = 'https://ibdtpromwibckwsdkvvz.supabase.co';
 let savedCustomConfig = null;
 try {
   const raw = localStorage.getItem('jln_supabase_config_v1');
   if (raw) savedCustomConfig = JSON.parse(raw);
 } catch (_) {}
+if (!savedCustomConfig) {
+  try {
+    const match = document.cookie.match(/(?:^|; )jln_supabase_config_v1=([^;]+)/);
+    if (match) savedCustomConfig = JSON.parse(decodeURIComponent(match[1]));
+  } catch (_) {}
+}
 
 window.JLN_SUPABASE = savedCustomConfig || window.JLN_SUPABASE || {
-  url: 'https://obuldanrptloktxcffvn.supabase.co',
+  url: DEFAULT_SUPABASE_URL,
   anonKey: ''
 };
 
@@ -172,7 +181,12 @@ window.JLN_SUPABASE_CONFIG = {
     const cleanUrl = String(url || '').trim().replace(/\/$/, '');
     const cleanKey = String(anonKey || '').trim();
     const config = { url: cleanUrl, anonKey: cleanKey };
-    localStorage.setItem('jln_supabase_config_v1', JSON.stringify(config));
+    const serialized = JSON.stringify(config);
+    localStorage.setItem('jln_supabase_config_v1', serialized);
+    // Cookie fallback for browsers where localStorage is cleared/blocked.
+    try {
+      document.cookie = `jln_supabase_config_v1=${encodeURIComponent(serialized)}; Max-Age=31536000; Path=/; SameSite=Lax`;
+    } catch (_) {}
     window.JLN_SUPABASE = config;
     window.JLN_SUPABASE_READY = Boolean(
       cleanUrl && cleanUrl.includes('supabase.co') && cleanKey && cleanKey.length > 10
@@ -184,6 +198,7 @@ window.JLN_SUPABASE_CONFIG = {
   },
   clear() {
     localStorage.removeItem('jln_supabase_config_v1');
+    try { document.cookie = 'jln_supabase_config_v1=; Max-Age=0; Path=/; SameSite=Lax'; } catch (_) {}
     window.JLN_SUPABASE = { url: '', anonKey: '' };
     window.JLN_SUPABASE_READY = false;
     window.supabaseClient = null;
