@@ -55,10 +55,14 @@ window.supabase = window.supabase || {
       // (eyJ...) are JWTs and may also be sent as Authorization: Bearer.
       const headers = {
         apikey: key,
-        'Content-Type': 'application/json',
         Prefer: 'return=representation',
         ...customHeaders
       };
+      // Content-Type is only needed when sending JSON. Omitting it on GET
+      // avoids an unnecessary CORS preflight in browser deployments.
+      if (payload !== undefined) {
+        headers['Content-Type'] = 'application/json';
+      }
       if (String(key).startsWith('eyJ')) {
         headers.Authorization = 'Bearer ' + key;
       }
@@ -197,8 +201,7 @@ window.JLN_SUPABASE_CONFIG = {
           // New sb_publishable_ keys are opaque API keys, not JWTs.
           // Sending them as Bearer tokens can produce "Invalid JWT".
           const headers = {
-            apikey: targetKey,
-            'Content-Type': 'application/json'
+            apikey: targetKey
           };
           if (String(targetKey).startsWith('eyJ')) {
             headers.Authorization = `Bearer ${targetKey}`;
