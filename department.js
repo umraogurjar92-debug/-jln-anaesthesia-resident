@@ -95,7 +95,7 @@
 
     list.querySelectorAll(':scope > .card').forEach(card => {
       const onclick = card.getAttribute('onclick') || '';
-      const match = onclick.match(/editPac\\('([^']+)'\\)/);
+      const match = onclick.match(/editPac\(['"]([^'"]+)['"]\)/);
       const id = match ? match[1] : '';
       const item = byId.get(id);
       const dept = item && item.department ? item.department : 'UNASSIGNED';
@@ -104,7 +104,7 @@
 
     list.querySelectorAll(':scope > .card').forEach(card => {
       const onclick = card.getAttribute('onclick') || '';
-      const match = onclick.match(/editPac\\('([^']+)'\\)/);
+      const match = onclick.match(/editPac\(['"]([^'"]+)['"]\)/);
       const item = match ? byId.get(match[1]) : null;
       if (!item) return;
       let badge = card.querySelector('.pac-department-badge');
