@@ -1,1 +1,197 @@
-[]
+[
+  {
+    "id": "fddcdfe9-5f7a-4b9a-8ab2-4383dbe2a6a6",
+    "date": "2026-09-18",
+    "time": "09:30",
+    "ot": "Lap OT",
+    "resident": "Dr. Umrao Gurjar",
+    "patient": "Ramesh Kumar (CR: 2026/8941)",
+    "age": "52 Male",
+    "weight": "72 kg",
+    "asa": "ASA II",
+    "procedure": "Laparoscopic Cholecystectomy",
+    "anaesthesia": "General Anaesthesia",
+    "airway": "ETT (Endotracheal Tube)",
+    "monitoring": [
+      "ECG",
+      "NIBP",
+      "SpO₂",
+      "EtCO₂",
+      "Temp",
+      "Urine Output"
+    ],
+    "completed": false,
+    "completed_at": null,
+    "created_at": "2026-09-18T05:23:55.005Z",
+    "updated_at": "2026-09-18T06:23:55.005Z",
+    "events": [
+      {
+        "id": "8701b46b-4628-4aae-9ee9-09ea00188a64",
+        "time": "09:35",
+        "type": "Drug given",
+        "detail": "Premedication: Inj Glycopyrrolate 0.2 mg + Inj Fentanyl 120 mcg IV given."
+      },
+      {
+        "id": "e35fbc7d-908b-44d1-a5af-02bbda236f22",
+        "time": "09:40",
+        "type": "Drug given",
+        "detail": "Induction: Inj Propofol 130 mg + Inj Atracurium 35 mg IV. Intubated with 8.0 cuffed ETT."
+      },
+      {
+        "id": "621e70d8-1444-4e9f-9dbe-87fc20b5bbaa",
+        "time": "10:05",
+        "type": "Drug given",
+        "detail": "Analgesia: Inj Paracetamol 1 g IV infusion + Inj Ondansetron 4 mg IV given."
+      }
+    ],
+    "time_points": [
+      {
+        "intervalIndex": 0,
+        "label": "0m (Start)",
+        "time": "09:30",
+        "bp": "130/84",
+        "hr": "78",
+        "spo2": "99",
+        "etco2": "34",
+        "temp": "36.5",
+        "urine": "60",
+        "fluid": "RL 500 mL",
+        "infusion": "",
+        "ventmode": "VCV (Volume Control)",
+        "tv": "450",
+        "rr": "12",
+        "ie": "1:2",
+        "ppeak": "18",
+        "peep": "5",
+        "fio2": "40",
+        "note": "Induction smooth, bilateral air entry equal, throat pack placed."
+      },
+      {
+        "intervalIndex": 1,
+        "label": "+20m",
+        "time": "09:50",
+        "bp": "122/78",
+        "hr": "72",
+        "spo2": "100",
+        "etco2": "36",
+        "temp": "36.5",
+        "urine": "110",
+        "fluid": "RL 800 mL",
+        "infusion": "",
+        "ventmode": "VCV (Volume Control)",
+        "tv": "450",
+        "rr": "12",
+        "ie": "1:2",
+        "ppeak": "21",
+        "peep": "5",
+        "fio2": "40",
+        "note": "Pneumoperitoneum created (IAP 12 mmHg), hemodynamically stable, ETCO2 stable."
+      },
+      {
+        "intervalIndex": 2,
+        "label": "+40m",
+        "time": "10:10",
+        "bp": "116/74",
+        "hr": "68",
+        "spo2": "100",
+        "etco2": "35",
+        "temp": "36.6",
+        "urine": "160",
+        "fluid": "RL 1100 mL",
+        "infusion": "",
+        "ventmode": "VCV (Volume Control)",
+        "tv": "450",
+        "rr": "12",
+        "ie": "1:2",
+        "ppeak": "20",
+        "peep": "5",
+        "fio2": "40",
+        "note": "Gallbladder dissection in progress, cystic duct clipped, minimal blood loss."
+      }
+    ],
+    "latest_monitor": {
+      "intervalIndex": 2,
+      "label": "+40m",
+      "time": "10:10",
+      "bp": "116/74",
+      "hr": "68",
+      "spo2": "100",
+      "etco2": "35",
+      "temp": "36.6",
+      "urine": "160",
+      "fluid": "RL 1100 mL",
+      "ventmode": "VCV (Volume Control)",
+      "tv": "450",
+      "rr": "12",
+      "ie": "1:2",
+      "ppeak": "20",
+      "peep": "5",
+      "fio2": "40",
+      "note": "Gallbladder dissection in progress."
+    }
+  },
+  {
+    "id": "e203cdd8-d99f-4365-9a5a-3015ac9320f1",
+    "date": "2026-09-18",
+    "time": "10:00",
+    "ot": "SSR",
+    "resident": "Dr. Ankit Sharma",
+    "patient": "Vikas Meena (CR: 2026/9214)",
+    "age": "28 Male",
+    "weight": "64 kg",
+    "asa": "ASA I (E)",
+    "procedure": "Open Appendicectomy",
+    "anaesthesia": "Spinal Anaesthesia",
+    "airway": "Regional / No Airway Device",
+    "monitoring": [
+      "ECG",
+      "NIBP",
+      "SpO₂"
+    ],
+    "completed": false,
+    "completed_at": null,
+    "created_at": "2026-09-18T05:53:55.005Z",
+    "updated_at": "2026-09-18T06:23:55.005Z",
+    "events": [
+      {
+        "id": "cbc185bb-1314-4077-8286-53554dbd8835",
+        "time": "10:10",
+        "type": "Regional / block",
+        "detail": "Lumbar subarachnoid block given at L3-L4 interspace with 25G Quincke needle. 0.5% Bupivacaine Heavy 2.8 mL + Fentanyl 20 mcg injected. Clear CSF flow confirmed."
+      }
+    ],
+    "time_points": [
+      {
+        "intervalIndex": 0,
+        "label": "0m (Start)",
+        "time": "10:00",
+        "bp": "118/76",
+        "hr": "80",
+        "spo2": "99",
+        "etco2": "",
+        "temp": "36.6",
+        "urine": "",
+        "fluid": "RL 500 mL",
+        "infusion": "",
+        "ventmode": "",
+        "tv": "",
+        "rr": "",
+        "ie": "",
+        "ppeak": "",
+        "peep": "",
+        "fio2": "",
+        "note": "Sensory block level T6 achieved. Patient comfortable and pain free."
+      }
+    ],
+    "latest_monitor": {
+      "intervalIndex": 0,
+      "label": "0m (Start)",
+      "time": "10:00",
+      "bp": "118/76",
+      "hr": "80",
+      "spo2": "99",
+      "fluid": "RL 500 mL",
+      "note": "Sensory block level T6 achieved."
+    }
+  }
+]

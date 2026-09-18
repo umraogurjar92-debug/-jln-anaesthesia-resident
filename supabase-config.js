@@ -1,13 +1,22 @@
-window.JLN_SUPABASE = window.JLN_SUPABASE || {
+// Load custom Supabase config from localStorage if saved by user
+let savedCustomConfig = null;
+try {
+  const raw = localStorage.getItem('jln_supabase_config_v1');
+  if (raw) savedCustomConfig = JSON.parse(raw);
+} catch (_) {}
+
+window.JLN_SUPABASE = savedCustomConfig || window.JLN_SUPABASE || {
   url: 'https://obuldanrptloktxcffvn.supabase.co',
-  anonKey: 'sb_publishable_s0yHqZtJV8xfnC7kPKxj3g_u_nR_d-6'
+  anonKey: ''
 };
 
+// Check if user has configured valid Supabase keys
 window.JLN_SUPABASE_READY = Boolean(
   window.JLN_SUPABASE &&
   window.JLN_SUPABASE.url &&
   window.JLN_SUPABASE.url.includes('supabase.co') &&
   window.JLN_SUPABASE.anonKey &&
+  window.JLN_SUPABASE.anonKey.trim().length > 10 &&
   !window.JLN_SUPABASE.anonKey.includes('your-anon-key')
 );
 
@@ -141,3 +150,60 @@ window.supabase = window.supabase || {
 window.supabaseClient = window.JLN_SUPABASE_READY
   ? window.supabase.createClient(window.JLN_SUPABASE.url, window.JLN_SUPABASE.anonKey)
   : null;
+
+window.JLN_SUPABASE_CONFIG = {
+  get() {
+    return {
+      url: (window.JLN_SUPABASE && window.JLN_SUPABASE.url) || '',
+      anonKey: (window.JLN_SUPABASE && window.JLN_SUPABASE.anonKey) || '',
+      isReady: Boolean(window.JLN_SUPABASE_READY && window.supabaseClient)
+    };
+  },
+  save(url, anonKey) {
+    const cleanUrl = String(url || '').trim().replace(/\/$/, '');
+    const cleanKey = String(anonKey || '').trim();
+    const config = { url: cleanUrl, anonKey: cleanKey };
+    localStorage.setItem('jln_supabase_config_v1', JSON.stringify(config));
+    window.JLN_SUPABASE = config;
+    window.JLN_SUPABASE_READY = Boolean(
+      cleanUrl && cleanUrl.includes('supabase.co') && cleanKey && cleanKey.length > 10
+    );
+    window.supabaseClient = window.JLN_SUPABASE_READY
+      ? window.supabase.createClient(cleanUrl, cleanKey)
+      : null;
+    return window.JLN_SUPABASE_READY;
+  },
+  clear() {
+    localStorage.removeItem('jln_supabase_config_v1');
+    window.JLN_SUPABASE = { url: '', anonKey: '' };
+    window.JLN_SUPABASE_READY = false;
+    window.supabaseClient = null;
+  },
+  async test(url, anonKey) {
+    const targetUrl = url || (window.JLN_SUPABASE && window.JLN_SUPABASE.url);
+    const targetKey = anonKey || (window.JLN_SUPABASE && window.JLN_SUPABASE.anonKey);
+    if (!targetUrl || !targetKey) {
+      return { ok: false, message: 'Please provide both Supabase Project URL and Anon/Publishable API Key.' };
+    }
+    try {
+      const baseUrl = `${String(targetUrl).replace(/\/$/, '')}/rest/v1`;
+      const res = await fetch(`${baseUrl}/pac_cases?select=id&limit=1`, {
+        headers: {
+          apikey: targetKey,
+          Authorization: `Bearer ${targetKey}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      if (res.ok) {
+        return { ok: true, message: 'Connection successful! Cloud database is connected.' };
+      }
+      const text = await res.text();
+      let errData = null;
+      try { errData = JSON.parse(text); } catch (_) {}
+      const errMsg = (errData && errData.message) || `HTTP ${res.status}: ${res.statusText || 'Failed'}`;
+      return { ok: false, message: errMsg };
+    } catch (err) {
+      return { ok: false, message: err.message || 'Network connection failed.' };
+    }
+  }
+};

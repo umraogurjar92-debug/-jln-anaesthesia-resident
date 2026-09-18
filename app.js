@@ -21,7 +21,10 @@
     otCases: [],
     otList: DEFAULT_OTS,
     searchQuery: '',
-    selectedDate: new Date().toISOString().slice(0, 10),
+    selectedDate: (() => {
+      const d = new Date();
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    })(),
     pacStatusFilter: 'ALL',
     otFilter: 'ALL',
     theme: 'light',
@@ -39,10 +42,26 @@
     div.textContent = String(val);
     return div.innerHTML;
   };
-  const uid = () => (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2);
-  const formatTimeNow = () => new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+  const uid = () => {
+    if (typeof window !== 'undefined' && window.crypto && typeof window.crypto.randomUUID === 'function') {
+      try { return window.crypto.randomUUID(); } catch (_) {}
+    }
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+      const r = Math.random() * 16 | 0;
+      const v = c === 'x' ? r : (r & 0x3 | 0x8);
+      return v.toString(16);
+    });
+  };
+  const getTodayDateStr = () => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  };
+  const formatTimeNow = () => {
+    const d = new Date();
+    return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+  };
   const formatDateLabel = (isoDate) => {
-    if (!isoDate) return '';
+    if (!isoDate) return 'All Dates';
     const parts = isoDate.split('-');
     if (parts.length !== 3) return isoDate;
     return new Date(+parts[0], +parts[1] - 1, +parts[2]).toLocaleDateString([], {
@@ -144,9 +163,134 @@
     localStorage.setItem(STORAGE_KEYS.OT_LIST, JSON.stringify(state.otList));
   }
 
+  let localServerAvailable = false;
+
+  async function checkLocalServer() {
+    if (typeof window === 'undefined' || !window.location.protocol.startsWith('http')) {
+      localServerAvailable = false;
+      return false;
+    }
+    try {
+      const res = await fetch('./api/pac-cases', { method: 'GET', cache: 'no-store' });
+      localServerAvailable = res.ok;
+      return res.ok;
+    } catch (_) {
+      localServerAvailable = false;
+      return false;
+    }
+  }
+
+  async function syncWithLocalServer() {
+    if (typeof window === 'undefined' || !window.location.protocol.startsWith('http')) return;
+    try {
+      const [pacRes, otRes] = await Promise.all([
+        fetch('./api/pac-cases', { method: 'GET', cache: 'no-store' }),
+        fetch('./api/ot-cases', { method: 'GET', cache: 'no-store' })
+      ]);
+
+      if (pacRes.ok) {
+        const serverPacs = await pacRes.json();
+        if (Array.isArray(serverPacs)) {
+          if (serverPacs.length >= state.pacCases.length && serverPacs.length > 0) {
+            state.pacCases = serverPacs;
+            localStorage.setItem(STORAGE_KEYS.PAC, JSON.stringify(state.pacCases));
+          } else if (state.pacCases.length > 0) {
+            await fetch('./api/pac-cases', {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(state.pacCases)
+            });
+          }
+        }
+      }
+
+      if (otRes.ok) {
+        const serverOts = await otRes.json();
+        if (Array.isArray(serverOts)) {
+          if (serverOts.length >= state.otCases.length && serverOts.length > 0) {
+            state.otCases = serverOts;
+            localStorage.setItem(STORAGE_KEYS.OT, JSON.stringify(state.otCases));
+          } else if (state.otCases.length > 0) {
+            await fetch('./api/ot-cases', {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(state.otCases)
+            });
+          }
+        }
+      }
+
+      localServerAvailable = true;
+      const stEl = $('localServerStatus');
+      if (stEl) {
+        stEl.textContent = '✓ Connected to Local Server';
+        stEl.style.color = 'var(--success)';
+      }
+      if (!window.supabaseClient) {
+        updateSyncPill('Server Synced', 'online');
+      }
+      render();
+    } catch (_) {
+      localServerAvailable = false;
+      const stEl = $('localServerStatus');
+      if (stEl) {
+        stEl.textContent = 'Offline / Local storage';
+        stEl.style.color = 'var(--text-muted)';
+      }
+    }
+  }
+
+  async function pushPacToLocalServer(caseItem) {
+    if (!localServerAvailable) return;
+    try {
+      await fetch('./api/pac-cases', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(caseItem)
+      });
+    } catch (_) {}
+  }
+
+  async function pushOtToLocalServer(caseItem) {
+    if (!localServerAvailable) return;
+    try {
+      await fetch('./api/ot-cases', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(caseItem)
+      });
+    } catch (_) {}
+  }
+
+  async function deletePacFromLocalServer(id) {
+    if (!localServerAvailable) return;
+    try {
+      await fetch('./api/pac-cases', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id })
+      });
+    } catch (_) {}
+  }
+
+  async function deleteOtFromLocalServer(id) {
+    if (!localServerAvailable) return;
+    try {
+      await fetch('./api/ot-cases', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id })
+      });
+    } catch (_) {}
+  }
+
   async function syncWithSupabase() {
     if (!window.supabaseClient) {
-      updateSyncPill('Local Only', 'offline');
+      if (localServerAvailable) {
+        updateSyncPill('Server Synced', 'online');
+      } else {
+        updateSyncPill('Offline / Local', 'offline');
+      }
       return;
     }
 
@@ -155,7 +299,7 @@
     try {
       const pacRes = await window.supabaseClient.from('pac_cases').select('*').order('created_at', { ascending: false });
       if (!pacRes.error && Array.isArray(pacRes.data)) {
-        if (pacRes.data.length >= state.pacCases.length) {
+        if (pacRes.data.length >= state.pacCases.length && pacRes.data.length > 0) {
           state.pacCases = pacRes.data;
           localStorage.setItem(STORAGE_KEYS.PAC, JSON.stringify(state.pacCases));
         } else if (state.pacCases.length > 0) {
@@ -165,7 +309,7 @@
 
       const otRes = await window.supabaseClient.from('ot_cases').select('*').order('created_at', { ascending: false });
       if (!otRes.error && Array.isArray(otRes.data)) {
-        if (otRes.data.length >= state.otCases.length) {
+        if (otRes.data.length >= state.otCases.length && otRes.data.length > 0) {
           state.otCases = otRes.data;
           localStorage.setItem(STORAGE_KEYS.OT, JSON.stringify(state.otCases));
         } else if (state.otCases.length > 0) {
@@ -174,29 +318,37 @@
       }
 
       updateSyncPill('Cloud Synced', 'online');
+      render();
     } catch (err) {
       console.warn('Supabase sync notice:', err);
-      updateSyncPill('Offline / Local', 'offline');
+      if (localServerAvailable) {
+        updateSyncPill('Server Synced', 'online');
+      } else {
+        updateSyncPill('Offline / Local', 'offline');
+      }
     }
   }
 
   async function pushPacToCloud(caseItem) {
+    pushPacToLocalServer(caseItem);
     if (!window.supabaseClient) return;
     try {
       await window.supabaseClient.from('pac_cases').upsert([caseItem], { onConflict: 'id' });
-      updateSyncPill('Synced', 'online');
+      updateSyncPill('Cloud Synced', 'online');
     } catch (_) {}
   }
 
   async function pushOtToCloud(caseItem) {
+    pushOtToLocalServer(caseItem);
     if (!window.supabaseClient) return;
     try {
       await window.supabaseClient.from('ot_cases').upsert([caseItem], { onConflict: 'id' });
-      updateSyncPill('Synced', 'online');
+      updateSyncPill('Cloud Synced', 'online');
     } catch (_) {}
   }
 
   async function deletePacFromCloud(id) {
+    deletePacFromLocalServer(id);
     if (!window.supabaseClient) return;
     try {
       await window.supabaseClient.from('pac_cases').delete(id);
@@ -204,6 +356,7 @@
   }
 
   async function deleteOtFromCloud(id) {
+    deleteOtFromLocalServer(id);
     if (!window.supabaseClient) return;
     try {
       await window.supabaseClient.from('ot_cases').delete(id);
@@ -397,6 +550,11 @@
         <div class="empty-state">
           <h3>No PAC cases found</h3>
           <p>Tap "New PAC" to document a pre-anaesthesia evaluation.</p>
+          <div style="margin-top:12px">
+            <button class="btn btn-secondary btn-sm" type="button" onclick="window.JLN_APP.loadSampleData()">
+              ✨ Load JLN Sample Cases to Test
+            </button>
+          </div>
         </div>
       `;
       return;
@@ -803,10 +961,23 @@
     const filtered = getFilteredOtCases();
 
     if (!filtered.length) {
+      const dateText = state.selectedDate ? formatDateLabel(state.selectedDate) : 'all dates';
+      const hasAnyCases = state.otCases.length > 0;
       container.innerHTML = `
         <div class="empty-state">
-          <h3>No OT cases found for ${formatDateLabel(state.selectedDate)}</h3>
-          <p>Tap "Start New Case" or select a PAC case and click "Send to OT".</p>
+          <h3>No OT cases found for ${dateText}</h3>
+          <p>Tap "Start New Case" or select a PAC case and click "Move to OT Table".</p>
+          <div style="display:flex;gap:8px;justify-content:center;margin-top:12px;flex-wrap:wrap">
+            ${hasAnyCases ? `
+              <button class="btn btn-secondary btn-sm" type="button" onclick="$('allDatesBtn')?.click()">
+                📅 View All ${state.otCases.length} Cases Across All Dates
+              </button>
+            ` : `
+              <button class="btn btn-primary btn-sm" type="button" onclick="window.JLN_APP.loadSampleData()">
+                ✨ Load JLN Sample Cases to Test
+              </button>
+            `}
+          </div>
         </div>
       `;
       return;
@@ -1044,9 +1215,9 @@
     const boardEl = $('dashboardRoomBoard');
     if (!matrixEl || !boardEl) return;
 
-    const todayCases = state.otCases.filter(
-      (c) => (c.date || (c.created_at || '').slice(0, 10)) === state.selectedDate
-    );
+    const todayCases = state.selectedDate
+      ? state.otCases.filter((c) => (c.date || (c.created_at || '').slice(0, 10)) === state.selectedDate)
+      : state.otCases;
 
     const total = todayCases.length;
     const active = todayCases.filter((c) => !c.completed).length;
@@ -1166,6 +1337,7 @@
   }
 
   // --- Search & Filter Listeners ---
+  // --- Search & Filter Listeners ---
   function setupSearchAndFilters() {
     const searchInput = $('globalSearchInput');
     if (searchInput) {
@@ -1176,10 +1348,32 @@
     }
 
     const dateInput = $('globalDateInput');
+    const allDatesBtn = $('allDatesBtn');
+
     if (dateInput) {
       dateInput.value = state.selectedDate;
       dateInput.addEventListener('change', (e) => {
         state.selectedDate = e.target.value;
+        if (allDatesBtn) {
+          allDatesBtn.textContent = state.selectedDate ? 'All Dates' : 'Today';
+        }
+        render();
+      });
+    }
+
+    if (allDatesBtn) {
+      allDatesBtn.addEventListener('click', () => {
+        if (state.selectedDate) {
+          state.selectedDate = '';
+          if (dateInput) dateInput.value = '';
+          allDatesBtn.textContent = 'Today';
+          allDatesBtn.classList.add('active');
+        } else {
+          state.selectedDate = getTodayDateStr();
+          if (dateInput) dateInput.value = state.selectedDate;
+          allDatesBtn.textContent = 'All Dates';
+          allDatesBtn.classList.remove('active');
+        }
         render();
       });
     }
@@ -1205,6 +1399,347 @@
     }
   }
 
+  // --- Settings & Configuration Listeners ---
+  function setupSettingsView() {
+    const urlInput = $('supabaseUrlInput');
+    const keyInput = $('supabaseKeyInput');
+    const statusMsg = $('supabaseStatusMessage');
+
+    if (window.JLN_SUPABASE_CONFIG && urlInput && keyInput) {
+      const current = window.JLN_SUPABASE_CONFIG.get();
+      urlInput.value = current.url || '';
+      keyInput.value = current.anonKey || '';
+    }
+
+    const saveCfgBtn = $('saveSupabaseConfigBtn');
+    if (saveCfgBtn) {
+      saveCfgBtn.addEventListener('click', () => {
+        const url = urlInput ? urlInput.value.trim() : '';
+        const key = keyInput ? keyInput.value.trim() : '';
+        if (window.JLN_SUPABASE_CONFIG) {
+          window.JLN_SUPABASE_CONFIG.save(url, key);
+        }
+        if (statusMsg) {
+          statusMsg.style.display = 'block';
+          statusMsg.style.color = 'var(--success)';
+          statusMsg.textContent = '✓ Cloud configuration saved.';
+        }
+        syncWithSupabase();
+      });
+    }
+
+    const testBtn = $('testSupabaseBtn');
+    if (testBtn) {
+      testBtn.addEventListener('click', async () => {
+        const url = urlInput ? urlInput.value.trim() : '';
+        const key = keyInput ? keyInput.value.trim() : '';
+        if (statusMsg) {
+          statusMsg.style.display = 'block';
+          statusMsg.style.color = 'var(--text-muted)';
+          statusMsg.textContent = 'Testing connection to Supabase...';
+        }
+        if (window.JLN_SUPABASE_CONFIG) {
+          const res = await window.JLN_SUPABASE_CONFIG.test(url, key);
+          if (statusMsg) {
+            statusMsg.style.color = res.ok ? 'var(--success)' : 'var(--danger)';
+            statusMsg.textContent = res.ok ? `✓ ${res.message}` : `✕ ${res.message}`;
+          }
+        }
+      });
+    }
+
+    const syncServerBtn = $('syncLocalServerBtn');
+    if (syncServerBtn) {
+      syncServerBtn.addEventListener('click', syncWithLocalServer);
+    }
+
+    const loadDemoBtn = $('loadSampleCasesBtn');
+    if (loadDemoBtn) {
+      loadDemoBtn.addEventListener('click', () => {
+        loadSampleData();
+        alert('JLN clinical sample cases loaded! Switching to OT view.');
+        switchTab('ot');
+      });
+    }
+
+    const resetBtn = $('resetDataBtn');
+    if (resetBtn) {
+      resetBtn.addEventListener('click', () => {
+        if (!confirm('Are you sure you want to clear all PAC and OT cases?')) return;
+        state.pacCases = [];
+        state.otCases = [];
+        saveLocalData();
+        if (localServerAvailable) {
+          fetch('./api/pac-cases', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: '[]' });
+          fetch('./api/ot-cases', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: '[]' });
+        }
+        render();
+        alert('All local cases cleared.');
+      });
+    }
+  }
+
+  // --- Clinical Demo Data Loader ---
+  function loadSampleData() {
+    const today = getTodayDateStr();
+
+    const samplePac = [
+      {
+        id: uid(),
+        name: 'Ramesh Kumar',
+        crNo: '2026/8941',
+        age: '52',
+        sex: 'Male',
+        ward: 'Surgery Ward Bed 14',
+        diagnosis: 'Cholelithiasis with Chronic Cholecystitis',
+        procedure: 'Laparoscopic Cholecystectomy',
+        comorbidities: 'HTN on Tab Telmisartan 40mg OD. Non-diabetic.',
+        medications: 'Telmisartan 40mg (taken yesterday).',
+        airway: 'Mallampati Class II, Mouth opening > 3 fingers, normal neck flexion & extension, good dentition.',
+        investigations: 'Hb 13.8 g/dL, TLC 7,400, Platelets 2.4 Lakh, PT/INR 1.05, Urea 24, S. Creat 0.9, ECG: Normal Sinus.',
+        asa: 'ASA II',
+        status: 'Cleared',
+        resident: 'Dr. Umrao Gurjar',
+        difficultAirway: false,
+        highRiskConsent: false,
+        plan: 'General Anaesthesia with endotracheal intubation (ETT 8.0 cuffed). Multimodal analgesia.',
+        advice: 'Take Telmisartan morning 6 AM with a sip of water. NPO confirmed.',
+        consultant: 'Dr. Staff Consultant',
+        advice_time: new Date().toISOString(),
+        created_at: new Date(Date.now() - 3600000).toISOString(),
+        updated_at: new Date().toISOString()
+      },
+      {
+        id: uid(),
+        name: 'Shanti Devi',
+        crNo: '2026/9102',
+        age: '68',
+        sex: 'Female',
+        ward: 'Ortho Female Ward Bed 6',
+        diagnosis: 'Fracture Neck of Femur (Right)',
+        procedure: 'Bipolar Hemiarthroplasty',
+        comorbidities: 'T2DM (on Metformin 500mg BD), CAD / Old IHD on Tab Ecosprin 75mg.',
+        medications: 'Metformin, Ecosprin (held for 4 days).',
+        airway: 'Mallampati Class III, mild cervical spine spondylosis stiffness, edentulous.',
+        investigations: 'Hb 10.4 g/dL, RBS 162 mg/dL, 2D Echo EF 50% with mild LV diastolic dysfunction.',
+        asa: 'ASA III',
+        status: 'Hold',
+        resident: 'Dr. Ankit Sharma',
+        difficultAirway: true,
+        highRiskConsent: true,
+        plan: 'Subarachnoid Block (Spinal) or CSE with invasive arterial blood pressure monitoring.',
+        advice: 'Hold pending repeat Cardiology assessment and coagulation profile review.',
+        consultant: 'Dr. Senior Consultant',
+        advice_time: new Date().toISOString(),
+        created_at: new Date(Date.now() - 7200000).toISOString(),
+        updated_at: new Date().toISOString()
+      },
+      {
+        id: uid(),
+        name: 'Pooja Sharma',
+        crNo: '2026/9345',
+        age: '26',
+        sex: 'Female',
+        ward: 'Labour Room / Obs OT',
+        diagnosis: 'G2P1L1 at 38 weeks with Fetal Distress & Previous LSCS',
+        procedure: 'Emergency Repeat Caesarean Section (LSCS)',
+        comorbidities: 'Pregnancy induced mild anemia (Hb 9.8). No HTN/DM.',
+        medications: 'Iron & Folic acid supplements.',
+        airway: 'Mallampati Class I, Full mouth opening, adequate neck mobility.',
+        investigations: 'Hb 9.8 g/dL, TLC 11,200, Platelets 1.9 Lakh, Blood Group B +ve cross-matched.',
+        asa: 'ASA I (E)',
+        status: 'Cleared',
+        resident: 'Dr. Umrao Gurjar',
+        difficultAirway: false,
+        highRiskConsent: false,
+        plan: 'Subarachnoid Block (Spinal) L3-L4 using 25G Quincke with Bupivacaine Heavy 0.5% (2.0 mL).',
+        advice: 'Emergency clearance. Preload with 500 mL RL. Left lateral tilt on OT table.',
+        consultant: 'Dr. Staff Consultant',
+        advice_time: new Date().toISOString(),
+        created_at: new Date(Date.now() - 1800000).toISOString(),
+        updated_at: new Date().toISOString()
+      }
+    ];
+
+    const sampleOt = [
+      {
+        id: uid(),
+        date: today,
+        time: '09:30',
+        ot: 'Lap OT',
+        resident: 'Dr. Umrao Gurjar',
+        patient: 'Ramesh Kumar (CR: 2026/8941)',
+        age: '52 Male',
+        weight: '72 kg',
+        asa: 'ASA II',
+        procedure: 'Laparoscopic Cholecystectomy',
+        anaesthesia: 'General Anaesthesia',
+        airway: 'ETT (Endotracheal Tube)',
+        monitoring: ['ECG', 'NIBP', 'SpO₂', 'EtCO₂', 'Temp', 'Urine Output'],
+        completed: false,
+        completed_at: null,
+        created_at: new Date(Date.now() - 3600000).toISOString(),
+        updated_at: new Date().toISOString(),
+        events: [
+          { id: uid(), time: '09:35', type: 'Drug given', detail: 'Premedication: Inj Glycopyrrolate 0.2 mg + Inj Fentanyl 120 mcg IV given.' },
+          { id: uid(), time: '09:40', type: 'Drug given', detail: 'Induction: Inj Propofol 130 mg + Inj Atracurium 35 mg IV. Intubated with 8.0 cuffed ETT.' },
+          { id: uid(), time: '10:05', type: 'Drug given', detail: 'Analgesia: Inj Paracetamol 1 g IV infusion + Inj Ondansetron 4 mg IV given.' }
+        ],
+        time_points: [
+          {
+            intervalIndex: 0,
+            label: '0m (Start)',
+            time: '09:30',
+            bp: '130/84',
+            hr: '78',
+            spo2: '99',
+            etco2: '34',
+            temp: '36.5',
+            urine: '60',
+            fluid: 'RL 500 mL',
+            infusion: '',
+            ventmode: 'VCV (Volume Control)',
+            tv: '450',
+            rr: '12',
+            ie: '1:2',
+            ppeak: '18',
+            peep: '5',
+            fio2: '40',
+            note: 'Induction smooth, bilateral air entry equal, throat pack placed.'
+          },
+          {
+            intervalIndex: 1,
+            label: '+20m',
+            time: '09:50',
+            bp: '122/78',
+            hr: '72',
+            spo2: '100',
+            etco2: '36',
+            temp: '36.5',
+            urine: '110',
+            fluid: 'RL 800 mL',
+            infusion: '',
+            ventmode: 'VCV (Volume Control)',
+            tv: '450',
+            rr: '12',
+            ie: '1:2',
+            ppeak: '21',
+            peep: '5',
+            fio2: '40',
+            note: 'Pneumoperitoneum created (IAP 12 mmHg), hemodynamically stable, ETCO2 stable.'
+          },
+          {
+            intervalIndex: 2,
+            label: '+40m',
+            time: '10:10',
+            bp: '116/74',
+            hr: '68',
+            spo2: '100',
+            etco2: '35',
+            temp: '36.6',
+            urine: '160',
+            fluid: 'RL 1100 mL',
+            infusion: '',
+            ventmode: 'VCV (Volume Control)',
+            tv: '450',
+            rr: '12',
+            ie: '1:2',
+            ppeak: '20',
+            peep: '5',
+            fio2: '40',
+            note: 'Gallbladder dissection in progress, cystic duct clipped, minimal blood loss.'
+          }
+        ],
+        latest_monitor: {
+          intervalIndex: 2,
+          label: '+40m',
+          time: '10:10',
+          bp: '116/74',
+          hr: '68',
+          spo2: '100',
+          etco2: '35',
+          temp: '36.6',
+          urine: '160',
+          fluid: 'RL 1100 mL',
+          ventmode: 'VCV (Volume Control)',
+          tv: '450',
+          rr: '12',
+          ie: '1:2',
+          ppeak: '20',
+          peep: '5',
+          fio2: '40',
+          note: 'Gallbladder dissection in progress.'
+        }
+      },
+      {
+        id: uid(),
+        date: today,
+        time: '10:00',
+        ot: 'SSR',
+        resident: 'Dr. Ankit Sharma',
+        patient: 'Vikas Meena (CR: 2026/9214)',
+        age: '28 Male',
+        weight: '64 kg',
+        asa: 'ASA I (E)',
+        procedure: 'Open Appendicectomy',
+        anaesthesia: 'Spinal Anaesthesia',
+        airway: 'Regional / No Airway Device',
+        monitoring: ['ECG', 'NIBP', 'SpO₂'],
+        completed: false,
+        completed_at: null,
+        created_at: new Date(Date.now() - 1800000).toISOString(),
+        updated_at: new Date().toISOString(),
+        events: [
+          { id: uid(), time: '10:10', type: 'Regional / block', detail: 'Lumbar subarachnoid block given at L3-L4 interspace with 25G Quincke needle. 0.5% Bupivacaine Heavy 2.8 mL + Fentanyl 20 mcg injected. Clear CSF flow confirmed.' }
+        ],
+        time_points: [
+          {
+            intervalIndex: 0,
+            label: '0m (Start)',
+            time: '10:00',
+            bp: '118/76',
+            hr: '80',
+            spo2: '99',
+            etco2: '',
+            temp: '36.6',
+            urine: '',
+            fluid: 'RL 500 mL',
+            infusion: '',
+            ventmode: '',
+            tv: '',
+            rr: '',
+            ie: '',
+            ppeak: '',
+            peep: '',
+            fio2: '',
+            note: 'Sensory block level T6 achieved. Patient comfortable and pain free.'
+          }
+        ],
+        latest_monitor: {
+          intervalIndex: 0,
+          label: '0m (Start)',
+          time: '10:00',
+          bp: '118/76',
+          hr: '80',
+          spo2: '99',
+          fluid: 'RL 500 mL',
+          note: 'Sensory block level T6 achieved.'
+        }
+      }
+    ];
+
+    state.pacCases = samplePac;
+    state.otCases = sampleOt;
+    saveLocalData();
+
+    if (localServerAvailable) {
+      fetch('./api/pac-cases', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(samplePac) });
+      fetch('./api/ot-cases', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(sampleOt) });
+    }
+
+    render();
+  }
+
   // --- Global Render ---
   function render() {
     if (state.currentTab === 'pac') renderPacView();
@@ -1218,6 +1753,7 @@
     loadLocalData();
     setupModals();
     setupSearchAndFilters();
+    setupSettingsView();
 
     $$('.nav-tab-btn').forEach((btn) => {
       btn.addEventListener('click', () => switchTab(btn.dataset.tab));
@@ -1239,6 +1775,13 @@
     window.addEventListener('hashchange', handleHashRoute);
     handleHashRoute();
 
+    // Check local node server first, then cloud
+    checkLocalServer().then((isAvailable) => {
+      if (isAvailable) {
+        syncWithLocalServer();
+      }
+    });
+
     syncWithSupabase();
   }
 
@@ -1250,8 +1793,13 @@
     updateVitals: (id, intervalIndex = null) => openUpdateVitalsModal(id, intervalIndex),
     addEvent: (id) => openAddEventModal(id),
     completeCase: (id) => completeOtCase(id),
-    deleteCase: (id) => deleteOtCase(id)
+    deleteCase: (id) => deleteOtCase(id),
+    loadSampleData: () => loadSampleData()
   };
 
-  document.addEventListener('DOMContentLoaded', init);
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
 })();

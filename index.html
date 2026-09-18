@@ -5,9 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#1570b8">
   <meta name="description" content="JLN Anaesthesia Resident - Clinical workspace for Pre-Anaesthetic Check-up (PAC) and Operating Theatre intra-op case tracking.">
-  <link rel="manifest" href="/manifest.webmanifest">
-  <link rel="icon" href="/icon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="/styles.css">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="./styles.css">
   <title>JLN Anaesthesia Resident</title>
 </head>
 <body>
@@ -71,10 +71,13 @@
           <input id="globalSearchInput" class="search-input" type="search" placeholder="Search patient, CR#, procedure, resident...">
         </div>
       </div>
-      <div class="toolbar-right">
+      <div class="toolbar-right" style="display:flex;align-items:center;gap:6px">
         <div class="date-badge">
           📅 <input id="globalDateInput" class="date-input" type="date">
         </div>
+        <button id="allDatesBtn" class="btn btn-secondary btn-sm" type="button" title="Show cases across all dates" style="padding:4px 9px;font-size:12px;font-weight:600">
+          All Dates
+        </button>
       </div>
     </div>
 
@@ -125,12 +128,63 @@
         <div class="card-header">
           <div class="card-title">☁️ Cloud Synchronization (Supabase)</div>
         </div>
-        <p style="font-size:13px;color:var(--text-muted);margin-bottom:14px">
-          The app stores all PAC and OT cases in browser storage for 100% offline capability. When connected, changes automatically sync with the department's Supabase cloud database.
+        <p style="font-size:13px;color:var(--text-muted);margin-bottom:12px">
+          Configure the departmental Supabase cloud database to automatically synchronize cases across resident smartphones, tablets, and OT desktop consoles.
         </p>
-        <button id="forceSyncBtn" class="btn btn-primary" type="button">
-          🔄 Sync With Cloud Now
-        </button>
+        <div class="form-grid" style="margin-bottom:12px">
+          <div class="form-group col-span-full">
+            <label class="form-label">Supabase Project URL</label>
+            <input id="supabaseUrlInput" class="form-control" placeholder="https://xxxxxxxxxxxx.supabase.co">
+          </div>
+          <div class="form-group col-span-full">
+            <label class="form-label">Anon / Publishable API Key</label>
+            <input id="supabaseKeyInput" class="form-control" type="password" placeholder="sb_publishable_... or eyJhbGciOi...">
+          </div>
+        </div>
+        <div id="supabaseStatusMessage" style="font-size:12px;font-weight:600;margin-bottom:12px;display:none"></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button id="saveSupabaseConfigBtn" class="btn btn-primary" type="button">
+            💾 Save Cloud Settings
+          </button>
+          <button id="testSupabaseBtn" class="btn btn-secondary" type="button">
+            🔍 Test Connection
+          </button>
+          <button id="forceSyncBtn" class="btn btn-secondary" type="button">
+            🔄 Sync Cloud Now
+          </button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">🖥️ Local Hospital Server Sync (Node.js)</div>
+        </div>
+        <p style="font-size:13px;color:var(--text-muted);margin-bottom:12px">
+          When running <code style="background:var(--surface);padding:2px 6px;border-radius:4px">npm start</code>, the built-in Node server securely persists PAC and OT records to disk (<code style="background:var(--surface);padding:2px 6px;border-radius:4px">data/</code>) and shares cases across your local network.
+        </p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          <button id="syncLocalServerBtn" class="btn btn-primary" type="button">
+            🔄 Sync With Local Server Now
+          </button>
+          <span id="localServerStatus" style="font-size:12px;color:var(--text-muted);font-weight:600"></span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">🧪 Clinical Demo & Testing</div>
+        </div>
+        <p style="font-size:13px;color:var(--text-muted);margin-bottom:12px">
+          Instantly populate realistic clinical sample cases (PAC evaluations, OT monitor flowsheet with 20-min vitals, ventilator settings, and complications) to test all features.
+        </p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button id="loadSampleCasesBtn" class="btn btn-primary" type="button">
+            ✨ Load JLN Clinical Sample Cases
+          </button>
+          <button id="resetDataBtn" class="btn btn-danger" type="button">
+            🗑️ Clear All Cases
+          </button>
+        </div>
       </div>
 
       <div class="card">
@@ -661,13 +715,13 @@
   </div>
 
   <!-- Scripts -->
-  <script src="/supabase-config.js"></script>
-  <script src="/app.js"></script>
+  <script src="./supabase-config.js"></script>
+  <script src="./app.js"></script>
   <script>
     // Register Service Worker for offline capability
-    if ('serviceWorker' in navigator) {
+    if ('serviceWorker' in navigator && window.location.protocol.startsWith('http')) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js').catch((err) => console.warn('SW register notice:', err));
+        navigator.serviceWorker.register('./sw.js').catch((err) => console.warn('SW register notice:', err));
       });
     }
 

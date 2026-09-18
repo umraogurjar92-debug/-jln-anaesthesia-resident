@@ -1,17 +1,21 @@
-﻿const CACHE_NAME = 'jln-anaesthesia-v2';
+const CACHE_NAME = 'jln-anaesthesia-v3';
 const APP_SHELL = [
-  '/',
-  '/index.html',
-  '/app.js',
-  '/styles.css',
-  '/supabase-config.js',
-  '/manifest.webmanifest',
-  '/icon.svg'
+  './',
+  './index.html',
+  './app.js',
+  './styles.css',
+  './supabase-config.js',
+  './manifest.webmanifest',
+  './icon.svg'
 ];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL))
+    caches.open(CACHE_NAME).then((cache) => {
+      return Promise.allSettled(
+        APP_SHELL.map((url) => cache.add(url).catch((err) => console.warn('SW cache add skipped:', url, err)))
+      );
+    })
   );
   self.skipWaiting();
 });
@@ -32,16 +36,17 @@ self.addEventListener('fetch', (event) => {
 
   const url = new URL(event.request.url);
 
-  // Do not intercept or cache cloud database API calls
-  if (url.hostname.includes('supabase.co')) {
+  // Do not intercept or cache cloud database API calls or local /api/ calls
+  if (url.hostname.includes('supabase.co') || url.pathname.startsWith('/api/')) {
     return;
   }
 
-  event.respondWith(
-    caches.match(event.request).then((cached) => {
-      if (cached) return cached;
+  const isDynamicAsset = url.pathname.endsWith('.js') || url.pathname.endsWith('.css') || url.pathname.endsWith('.html') || url.pathname === '/' || url.pathname.endsWith('/');
 
-      return fetch(event.request)
+  if (isDynamicAsset) {
+    // Network-First strategy for core application logic so updates apply immediately
+    event.respondWith(
+      fetch(event.request)
         .then((response) => {
           if (response && response.status === 200) {
             const copy = response.clone();
@@ -50,11 +55,27 @@ self.addEventListener('fetch', (event) => {
           return response;
         })
         .catch(() => {
-          // If navigating to an HTML route offline, return SPA shell
-          if (event.request.mode === 'navigate') {
-            return caches.match('/index.html');
+          return caches.match(event.request).then((cached) => {
+            if (cached) return cached;
+            if (event.request.mode === 'navigate') {
+              return caches.match('./index.html') || caches.match('/index.html');
+            }
+          });
+        })
+    );
+  } else {
+    // Cache-First for images and static assets
+    event.respondWith(
+      caches.match(event.request).then((cached) => {
+        if (cached) return cached;
+        return fetch(event.request).then((response) => {
+          if (response && response.status === 200) {
+            const copy = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
           }
+          return response;
         });
-    })
-  );
+      })
+    );
+  }
 });
