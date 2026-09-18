@@ -50,13 +50,18 @@ window.supabase = window.supabase || {
     const request = async (path, method = 'GET', payload, customHeaders = {}) => {
       const finalPath = path.includes('?') ? path : `${path}?select=*`;
 
+      // Supabase publishable keys (sb_publishable_...) are opaque API keys,
+      // not JWTs. Send them via the apikey header only. Legacy anon keys
+      // (eyJ...) are JWTs and may also be sent as Authorization: Bearer.
       const headers = {
         apikey: key,
-        Authorization: 'Bearer ' + key,
         'Content-Type': 'application/json',
         Prefer: 'return=representation',
         ...customHeaders
       };
+      if (String(key).startsWith('eyJ')) {
+        headers.Authorization = 'Bearer ' + key;
+      }
 
       const response = await fetch(`${baseUrl}/${finalPath.replace(/^\//, '')}`, {
         method,
@@ -188,11 +193,18 @@ window.JLN_SUPABASE_CONFIG = {
     try {
       const baseUrl = `${String(targetUrl).replace(/\/$/, '')}/rest/v1`;
       const res = await fetch(`${baseUrl}/pac_cases?select=id&limit=1`, {
-        headers: {
-          apikey: targetKey,
-          Authorization: `Bearer ${targetKey}`,
-          'Content-Type': 'application/json'
-        }
+        headers: (() => {
+          // New sb_publishable_ keys are opaque API keys, not JWTs.
+          // Sending them as Bearer tokens can produce "Invalid JWT".
+          const headers = {
+            apikey: targetKey,
+            'Content-Type': 'application/json'
+          };
+          if (String(targetKey).startsWith('eyJ')) {
+            headers.Authorization = `Bearer ${targetKey}`;
+          }
+          return headers;
+        })()
       });
       if (res.ok) {
         return { ok: true, message: 'Connection successful! Cloud database is connected.' };
