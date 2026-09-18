@@ -5,6 +5,8 @@ const APP_SHELL = [
   './app.js',
   './styles.css',
   './supabase-config.js',
+  './department.js',
+  './ot-drugs.js',
   './manifest.webmanifest',
   './icon.svg'
 ];
